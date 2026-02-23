@@ -1,23 +1,23 @@
 markdownExploder: true
 project:
   type: greenfield
-  installedAt: '2026-02-19T17:46:01.534Z'
+  installedAt: '2026-02-20T23:13:41.781Z'
   version: 2.1.0
 user_profile: bob
 ide:
   selected:
-    - claude-code
-    - codex
+    - gemini
+    - cursor
   configs:
     vscode: false
-    codex: true
-    gemini: false
-    cursor: false
+    codex: false
+    gemini: true
+    cursor: true
     github-copilot: false
     antigravity: false
     zed: false
     claude-desktop: false
-    claude-code: true
+    claude-code: false
 mcp:
   enabled: false
   configLocation: .claude/mcp.json
