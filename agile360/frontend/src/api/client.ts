@@ -63,6 +63,10 @@ export const api = {
   async delete<T = void>(path: string, token?: string) {
     return request<T>(path, { method: 'DELETE', token });
   },
+  /** DELETE com body JSON — usado por endpoints como DELETE /api/auth/mfa/disable. */
+  async deleteWithBody<T = void>(path: string, body: unknown, token?: string) {
+    return request<T>(path, { method: 'DELETE', body: JSON.stringify(body), token });
+  },
   /** Multipart/form-data — para upload de arquivos */
   async postForm<T>(path: string, form: FormData, token?: string) {
     const headers: HeadersInit = {};

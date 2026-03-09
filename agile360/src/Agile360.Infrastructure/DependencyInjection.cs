@@ -56,6 +56,10 @@ public static class DependencyInjection
         else
             services.AddScoped<IMfaService, DisabledMfaService>();
 
+        // Recovery Codes: sempre disponível, independente do MFA estar configurado.
+        // O RecoveryCodesController valida MfaEnabled antes de gerar — não depende da chave de criptografia.
+        services.AddScoped<IRecoveryCodeService, RecoveryCodeService>();
+
         // ─── Webhook ─────────────────────────────────────────────────────────────────
         services.AddSingleton<IWebhookSignatureValidator, WebhookSignatureValidator>();
 

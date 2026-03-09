@@ -28,8 +28,7 @@ public class AdvogadoBuilder
         Id               = _id,
         Nome             = _nome,
         Email            = _email,
-        NumeroOab        = _numeroOab,
-        OabUf            = _oabUf,
+        OAB              = $"{_oabUf}{_numeroOab}",
         StatusAssinatura = _status,
         CreatedAt        = _createdAt
     };

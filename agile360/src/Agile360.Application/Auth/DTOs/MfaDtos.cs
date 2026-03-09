@@ -32,6 +32,17 @@ public record MfaChallengeRequest(string MfaTempToken, string Code);
 /// <summary>Lightweight status for the profile / security settings page.</summary>
 public record MfaStatusResponse(bool MfaEnabled);
 
+// ── Ativação + Recovery Codes ────────────────────────────────────────────────
+
+/// <summary>
+/// Resposta do POST /api/auth/mfa/verify-setup.
+/// Inclui o status de ativação E os 10 códigos de recuperação em plaintext.
+/// Os códigos são exibidos APENAS nesta resposta — única oportunidade de visualização.
+/// </summary>
+public record MfaActivatedResponse(
+    bool MfaEnabled,
+    IReadOnlyList<string> RecoveryCodes);
+
 // ── Auth extension ─────────────────────────────────────────────────────────
 
 /// <summary>

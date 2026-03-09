@@ -65,7 +65,7 @@ public class ProcessoController(IProcessoRepository repo) : ControllerBase
 
     private static Processo FromCriar(CreateProcessoRequest r) => new()
     {
-        ClienteId           = r.ClienteId,
+        ClienteId           = r.IdCliente,
         NumProcesso         = r.NumProcesso.Trim(),
         ParteContraria      = r.ParteContraria,
         Tribunal            = r.Tribunal,
@@ -81,7 +81,7 @@ public class ProcessoController(IProcessoRepository repo) : ControllerBase
 
     private static void AplicarAtualizacao(Processo p, UpdateProcessoRequest r)
     {
-        if (r.ClienteId.HasValue)           p.ClienteId           = r.ClienteId;
+        if (r.IdCliente.HasValue)           p.ClienteId           = r.IdCliente;
         if (r.NumProcesso        != null)   p.NumProcesso         = r.NumProcesso;
         if (r.ParteContraria     != null)   p.ParteContraria      = r.ParteContraria;
         if (r.Tribunal           != null)   p.Tribunal            = r.Tribunal;
@@ -97,7 +97,7 @@ public class ProcessoController(IProcessoRepository repo) : ControllerBase
 
     private static ProcessoResponse ToResponse(Processo p) => new(
         Id:                  p.Id,
-        ClienteId:           p.ClienteId,
+        IdCliente:           p.ClienteId,
         NumProcesso:         p.NumProcesso,
         ParteContraria:      p.ParteContraria,
         Tribunal:            p.Tribunal,

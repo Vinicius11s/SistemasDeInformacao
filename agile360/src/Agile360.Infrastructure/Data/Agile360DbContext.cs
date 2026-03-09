@@ -22,6 +22,7 @@ public class Agile360DbContext : DbContext
     public DbSet<Nota> Notas => Set<Nota>();
     public DbSet<RefreshTokenSession> RefreshTokenSessions => Set<RefreshTokenSession>();
     public DbSet<StagingCliente> StagingClientes => Set<StagingCliente>();
+    public DbSet<RecoveryCode> RecoveryCodes => Set<RecoveryCode>();
 
     // Tabelas ainda não criadas no banco — DbSet disponível para migrations futuras,
     // mas as configurations abaixo mapeiam corretamente os nomes quando existirem.

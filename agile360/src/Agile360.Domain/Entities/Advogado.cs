@@ -38,7 +38,12 @@ public class Advogado
 
     public string? Plano { get; set; }
     public string? StatusAssinatura { get; set; }
-    public DateTimeOffset? DataExpiracao { get; set; }
+
+    /// <summary>
+    /// Data de expiração do plano. Armazenada como tipo "date" no PostgreSQL
+    /// (sem fuso horário). Usar DateOnly evita InvalidCastException do Npgsql.
+    /// </summary>
+    public DateOnly? DataExpiracao { get; set; }
     public string? StripeCustomerId { get; set; }
 
     // ─── Auth local ───────────────────────────────────────────────────────────────

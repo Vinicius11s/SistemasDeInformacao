@@ -183,7 +183,7 @@ public class ClienteBulkImportServiceTests
     {
         const string cpfExistente = "123.456.789-00";
         _repo.GetByCpfAsync("12345678900")
-             .Returns(new Cliente { NomeCompleto = "Antigo Dono", Cpf = "12345678900" });
+             .Returns(new Cliente { NomeCompleto = "Antigo Dono", CPF = "12345678900" });
 
         var linhas = new List<ImportarClienteRow>
         {

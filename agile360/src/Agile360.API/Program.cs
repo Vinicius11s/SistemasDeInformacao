@@ -98,6 +98,9 @@ builder.Services.AddRateLimiter(options =>
     options.AddFixedWindowLimiter("auth-login",    c => { c.Window = TimeSpan.FromMinutes(1); c.PermitLimit = 5; });
     options.AddFixedWindowLimiter("auth-register", c => { c.Window = TimeSpan.FromHours(1);   c.PermitLimit = 3; });
     options.AddFixedWindowLimiter("auth-forgot",   c => { c.Window = TimeSpan.FromHours(1);   c.PermitLimit = 3; });
+    // Recovery Codes — geração envolve 10 × BCrypt(cost 12) ≈ 2.5s de CPU.
+    // 3 req/hora por usuário autenticado previne DoS de CPU via endpoint /generate.
+    options.AddFixedWindowLimiter("mfa-generate",  c => { c.Window = TimeSpan.FromHours(1);   c.PermitLimit = 3; });
 });
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────

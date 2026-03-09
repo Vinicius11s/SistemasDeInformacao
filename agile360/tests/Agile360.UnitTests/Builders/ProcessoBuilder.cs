@@ -19,8 +19,8 @@ public class ProcessoBuilder
     public Processo Build() => new()
     {
         Id          = _id,
-        IdAdvogado  = _advogadoId,
-        IdCliente   = _clienteId,
+        AdvogadoId  = _advogadoId,
+        ClienteId   = _clienteId,
         NumProcesso = _numProcesso,
         Status      = _status
     };

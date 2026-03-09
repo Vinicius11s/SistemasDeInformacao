@@ -17,8 +17,8 @@ public class ClienteBuilder
     public Cliente Build() => new()
     {
         Id           = _id,
-        IdAdvogado   = _advogadoId,
+        AdvogadoId   = _advogadoId,
         NomeCompleto = _nomeCompleto,
-        Cpf          = _cpf
+        CPF          = _cpf
     };
 }

@@ -9,6 +9,7 @@ import {
 } from 'react';
 import * as authApi from '../api/auth';
 import type { Profile } from '../api/auth';
+import { mfaChallenge, mfaChallengeWithRecovery } from '../api/mfa';
 
 const TOKEN_KEY = 'agile360_token';
 const REFRESH_KEY = 'agile360_refresh';
@@ -33,6 +34,8 @@ const AuthContext = createContext<{
   register: (payload: Parameters<typeof authApi.register>[0]) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
   setTokens: (access: string, refresh: string) => void;
+  completeMfaChallenge: (mfaTempToken: string, code: string) => Promise<{ ok: boolean; error?: string }>;
+  completeMfaChallengeWithRecovery: (mfaTempToken: string, code: string) => Promise<{ ok: boolean; error?: string }>;
 } | null>(null);
 
 export function useAuth() {
@@ -105,9 +108,62 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ ...defaultState, loading: false });
   }, []);
 
+  /**
+   * Conclui o challenge MFA: valida o código TOTP, recebe o accessToken
+   * e atualiza o estado de autenticação. O refreshToken chega via HttpOnly cookie.
+   */
+  const completeMfaChallenge = useCallback(
+    async (mfaTempToken: string, code: string) => {
+      const res = await mfaChallenge(mfaTempToken, code);
+      if (!res.success) {
+        return { ok: false, error: res.error?.message ?? 'Código inválido.' };
+      }
+      const d = res.data!;
+      // Refresh token está no HttpOnly cookie — não precisa guardar no localStorage
+      setTokens(d.accessToken, '');
+      if (d.advogado) {
+        setState((s) => ({
+          ...s,
+          user: { id: d.advogado!.id, nome: d.advogado!.nome, email: d.advogado!.email, oab: d.advogado!.oab ?? '' },
+          loading: false,
+        }));
+      } else {
+        await loadUser(d.accessToken);
+      }
+      return { ok: true };
+    },
+    [setTokens, loadUser]
+  );
+
+  /**
+   * F7 — Conclui o challenge MFA com um Recovery Code de emergência.
+   * Chama POST /api/auth/mfa/challenge/recovery.
+   */
+  const completeMfaChallengeWithRecovery = useCallback(
+    async (mfaTempToken: string, code: string) => {
+      const res = await mfaChallengeWithRecovery(mfaTempToken, code);
+      if (!res.success) {
+        return { ok: false, error: res.error?.message ?? 'Código de recuperação inválido ou já utilizado.' };
+      }
+      const d = res.data!;
+      setTokens(d.accessToken, '');
+      if (d.advogado) {
+        setState((s) => ({
+          ...s,
+          user: { id: d.advogado!.id, nome: d.advogado!.nome, email: d.advogado!.email, oab: d.advogado!.oab ?? '' },
+          loading: false,
+        }));
+      } else {
+        await loadUser(d.accessToken);
+      }
+      return { ok: true };
+    },
+    [setTokens, loadUser]
+  );
+
   const value = useMemo(
-    () => ({ state, login, register, logout, setTokens }),
-    [state, login, register, logout, setTokens]
+    () => ({ state, login, register, logout, setTokens, completeMfaChallenge, completeMfaChallengeWithRecovery }),
+    [state, login, register, logout, setTokens, completeMfaChallenge, completeMfaChallengeWithRecovery]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

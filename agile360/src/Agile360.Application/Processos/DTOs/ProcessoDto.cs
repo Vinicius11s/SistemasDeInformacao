@@ -2,7 +2,7 @@ namespace Agile360.Application.Processos.DTOs;
 
 public record ProcessoResponse(
     Guid      Id,
-    Guid?     ClienteId,
+    Guid?     IdCliente,          // snake_case: id_cliente  (alinhado com o frontend)
     string    NumProcesso,
     string?   ParteContraria,
     string?   Tribunal,
@@ -18,7 +18,7 @@ public record ProcessoResponse(
 );
 
 public record CreateProcessoRequest(
-    Guid?     ClienteId,
+    Guid?     IdCliente,          // snake_case: id_cliente  (alinhado com o frontend)
     string    NumProcesso,
     string?   ParteContraria,
     string?   Tribunal,
@@ -33,7 +33,7 @@ public record CreateProcessoRequest(
 );
 
 public record UpdateProcessoRequest(
-    Guid?     ClienteId,
+    Guid?     IdCliente,          // snake_case: id_cliente  (alinhado com o frontend)
     string?   NumProcesso,
     string?   ParteContraria,
     string?   Tribunal,

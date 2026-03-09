@@ -17,4 +17,4 @@ public record AdvogadoProfileResponse(
     string? Telefone,
     string? Cidade,
     string? Estado,
-    DateTimeOffset? DataExpiracao);
+    DateOnly? DataExpiracao);      // date no Postgres → DateOnly no C# (sem timezone)

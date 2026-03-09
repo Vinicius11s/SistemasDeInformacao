@@ -7,6 +7,16 @@ export interface AuthResponse {
   advogado?: { id: string; nome: string; email: string; numero_oab: string };
 }
 
+/**
+ * Resposta retornada pelo endpoint POST /api/auth/mfa/challenge.
+ * O refreshToken é enviado via HttpOnly cookie — não aparece neste objeto.
+ */
+export interface SecureAuthResponse {
+  accessToken: string;
+  expiresInSeconds: number;
+  advogado?: { id: string; nome: string; email: string; oab?: string; fotoUrl?: string };
+}
+
 export interface Profile {
   id: string;
   nome: string;

@@ -84,13 +84,14 @@ public class CompromissoControllerTests
     //  STATUS INVÁLIDO
     // ════════════════════════════════════════════════════════════════════════
 
-    [Theory(DisplayName = "Criar: status inválido → 400")]
+    [Theory(DisplayName = "Criar: tipo inválido (status string obsoleto) → 400 por tipo")]
     [InlineData("Pendente")]
     [InlineData("agendado")]         // case-sensitive
     [InlineData("Encerrado")]
-    public async Task Criar_StatusInvalido_Retorna400(string statusInvalido)
+    public async Task Criar_StatusInvalido_Retorna400(string tipoInvalido)
     {
-        var req = CriarRequest(status: statusInvalido);
+        // Status foi migrado para IsActive (bool). O teste agora verifica tipo inválido.
+        var req = CriarRequest(tipo: tipoInvalido);
 
         var result = await _sut.Criar(req, CancellationToken.None);
 
@@ -174,11 +175,11 @@ public class CompromissoControllerTests
 
     private static CriarCompromissoRequest CriarRequest(
         string tipo       = "Atendimento",
-        string status     = "Agendado",
+        bool   isActive   = true,
         Guid?  idProcesso = null) => new(
         TipoCompromisso: tipo,
         TipoAudiencia:   null,
-        Status:          status,
+        IsActive:        isActive,
         Data:            HojeData,
         Hora:            HoraFixa,
         Local:           null,
@@ -191,11 +192,11 @@ public class CompromissoControllerTests
     {
         Id              = Guid.NewGuid(),
         TipoCompromisso = tipo,
-        Status          = "Agendado",
+        IsActive        = true,
         Data            = HojeData,
         Hora            = HoraFixa,
-        IdCliente       = ClienteId,
-        IdProcesso      = idProcesso,
+        ClienteId       = ClienteId,
+        ProcessoId      = idProcesso,
         CriadoEm        = HojeData,
     };
 }

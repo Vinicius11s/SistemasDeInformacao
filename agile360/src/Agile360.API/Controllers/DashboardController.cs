@@ -1,3 +1,4 @@
+using System.Data.Common;
 using Agile360.Domain.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -129,11 +130,17 @@ public class DashboardController(
         {
             return StatusCode(499); // Client Closed Request — browser cancelou antes de responder
         }
+        catch (DbException dbEx)
+        {
+            // Captura direta de qualquer exceção de banco (NpgsqlException, SqlException, etc.)
+            // incluindo: connection refused, host not found, auth failed, timeout, coluna inexistente.
+            logger.LogError(dbEx, "[Dashboard] Falha de banco de dados (DbException). Retornando dashboard vazio.");
+            return Ok(CreateEmptyResumo());
+        }
         catch (Exception ex) when (IsKnownDatabaseError(ex))
         {
-            // Loga o erro REAL para diagnóstico (coluna inexistente, timeout, etc.)
-            // e retorna 200 com dados vazios em vez de 500/503 para não travar o frontend.
-            logger.LogError(ex, "[Dashboard] Falha na query ao banco — verifique o mapeamento de colunas. Retornando dashboard vazio.");
+            // Fallback para erros de banco encapsulados por EF Core ou Npgsql (ExecutionStrategy, etc.)
+            logger.LogError(ex, "[Dashboard] Falha ao acessar o banco (conexão, query ou mapeamento). Retornando dashboard vazio.");
             return Ok(CreateEmptyResumo());
         }
         catch (Exception ex)
@@ -154,12 +161,27 @@ public class DashboardController(
 
     private static bool IsKnownDatabaseError(Exception ex)
     {
-        // Captura: timeout, leitura de stream, erros Npgsql (inclui 42703 coluna inexistente)
-        var msg = ex.Message + (ex.InnerException?.Message ?? "");
-        return msg.Contains("Timeout",  StringComparison.OrdinalIgnoreCase)
-            || msg.Contains("stream",   StringComparison.OrdinalIgnoreCase)
-            || msg.Contains("Npgsql",   StringComparison.OrdinalIgnoreCase)
-            || msg.Contains("42703",    StringComparison.Ordinal)
-            || msg.Contains("column",   StringComparison.OrdinalIgnoreCase);
+        // Verifica o tipo da exceção na cadeia de InnerExceptions (DbException, SocketException, etc.)
+        var current = ex;
+        while (current is not null)
+        {
+            if (current is DbException
+                || current is System.Net.Sockets.SocketException
+                || current.GetType().FullName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true)
+                return true;
+            current = current.InnerException;
+        }
+
+        // Fallback: inspeciona o texto completo do stack trace
+        var fullText = ex.ToString();
+        return fullText.Contains("Timeout",    StringComparison.OrdinalIgnoreCase)
+            || fullText.Contains("stream",     StringComparison.OrdinalIgnoreCase)
+            || fullText.Contains("Npgsql",     StringComparison.OrdinalIgnoreCase)
+            || fullText.Contains("42703",      StringComparison.Ordinal)
+            || fullText.Contains("column",     StringComparison.OrdinalIgnoreCase)
+            || fullText.Contains("connection", StringComparison.OrdinalIgnoreCase)
+            || fullText.Contains("host",       StringComparison.OrdinalIgnoreCase)
+            || fullText.Contains("refused",    StringComparison.OrdinalIgnoreCase)
+            || fullText.Contains("socket",     StringComparison.OrdinalIgnoreCase);
     }
 }

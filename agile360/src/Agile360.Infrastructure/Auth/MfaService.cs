@@ -17,6 +17,8 @@ namespace Agile360.Infrastructure.Auth;
 ///   - AES-256-GCM encryption is applied before every DB write.
 ///   - The encryption key lives in configuration (MfaSettings:EncryptionKey).
 ///   - A 32-byte random key is derived via PBKDF2 if the raw config value is shorter.
+///   - B10: CompleteSetupAsync gera 10 recovery codes automaticamente ao ativar o MFA.
+///   - B11: DisableAsync deleta todos os recovery codes ao desativar o MFA.
 /// </summary>
 public class MfaService : IMfaService
 {
@@ -26,10 +28,12 @@ public class MfaService : IMfaService
 
     private readonly Agile360DbContext _db;
     private readonly byte[] _encKey;
+    private readonly IRecoveryCodeService _recoveryCodes;
 
-    public MfaService(Agile360DbContext db, IConfiguration configuration)
+    public MfaService(Agile360DbContext db, IConfiguration configuration, IRecoveryCodeService recoveryCodes)
     {
         _db = db;
+        _recoveryCodes = recoveryCodes;
         var raw = configuration["MfaSettings:EncryptionKey"] ?? throw new InvalidOperationException(
             "MfaSettings:EncryptionKey is required for MFA. Add it to appsettings or user-secrets.");
         // Derive a 32-byte key using PBKDF2 (tolerant of short config values)
@@ -75,6 +79,12 @@ public class MfaService : IMfaService
         advogado.MfaEnabled = true;
         advogado.UpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(ct);
+
+        // B10: Os códigos de recuperação são gerados no controller VerifySetup,
+        // que chama IRecoveryCodeService.GenerateCodesAsync após esta chamada retornar true.
+        // Isso permite que os códigos em plaintext sejam incluídos na resposta HTTP
+        // para exibição única ao usuário no Passo 3 do stepper de segurança.
+
         return true;
     }
 
@@ -94,6 +104,11 @@ public class MfaService : IMfaService
         advogado.MfaPendingSecret = null;
         advogado.UpdatedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(ct);
+
+        // B11: Remove todos os códigos de recuperação ao desativar o MFA.
+        // Hard delete — códigos de backup sem MFA ativo não fazem sentido.
+        await _recoveryCodes.DeleteAllAsync(advogado.Id, ct);
+
         return true;
     }
 

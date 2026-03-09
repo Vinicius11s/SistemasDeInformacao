@@ -307,7 +307,7 @@ export function Prazos() {
 
       {/* Header — empilha no mobile, botão 44px */}
       <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <div>
+    <div>
           <h1 className="text-xl font-bold tracking-tight sm:text-2xl" style={{ color: 'var(--color-text-heading)' }}>
             Prazos
           </h1>

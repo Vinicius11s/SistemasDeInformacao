@@ -129,7 +129,7 @@ public class ProcessoControllerTests
                  Id          = Guid.NewGuid(),
                  NumProcesso = num,
                  Status      = "Ativo",
-                 IdCliente   = ClienteId,
+                 ClienteId   = ClienteId,
                  CriadoEm   = DateOnly.FromDateTime(DateTime.UtcNow),
              });
 
@@ -159,14 +159,14 @@ public class ProcessoControllerTests
                  Id              = id,
                  NumProcesso     = num,
                  Status          = "Ativo",
-                 IdCliente       = ClienteId,
+                 ClienteId       = ClienteId,
                  Assunto         = "Danos Morais",
                  Tribunal        = "TJSP",
                  FaseProcessual  = "Conhecimento",
                  CriadoEm       = hoje,
              });
 
-        var req = new CriarProcessoRequest(
+        var req = new CreateProcessoRequest(
             IdCliente:           ClienteId,
             NumProcesso:         num,
             Status:              "Ativo",
@@ -218,7 +218,7 @@ public class ProcessoControllerTests
     }
 
     // ─── Helper ──────────────────────────────────────────────────────────────
-    private static CriarProcessoRequest CriarRequest(
+    private static CreateProcessoRequest CriarRequest(
         string numProcesso    = "1234567-89.2026.8.26.0100",
         string status         = "Ativo",
         string? faseProcessual = null) => new(

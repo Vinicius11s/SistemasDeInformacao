@@ -7,6 +7,11 @@ using Microsoft.AspNetCore.RateLimiting;
 
 namespace Agile360.API.Controllers;
 
+// B10 — VerifySetup integrado com IRecoveryCodeService:
+//   Após CompleteSetupAsync retornar true, os 10 códigos de recuperação são gerados
+//   e incluídos na resposta (MfaActivatedResponse). O frontend exibe os códigos no
+//   Passo 3 do stepper de segurança — ÚNICA oportunidade de visualização.
+
 /// <summary>
 /// Endpoints for TOTP-based MFA (Google Authenticator).
 ///
@@ -36,12 +41,18 @@ public class MfaController : ControllerBase
     private readonly IMfaService _mfa;
     private readonly IAuthService _authService;
     private readonly ICurrentUserService _currentUser;
+    private readonly IRecoveryCodeService _recoveryCodes;
 
-    public MfaController(IMfaService mfa, IAuthService authService, ICurrentUserService currentUser)
+    public MfaController(
+        IMfaService mfa,
+        IAuthService authService,
+        ICurrentUserService currentUser,
+        IRecoveryCodeService recoveryCodes)
     {
-        _mfa = mfa;
-        _authService = authService;
-        _currentUser = currentUser;
+        _mfa           = mfa;
+        _authService   = authService;
+        _currentUser   = currentUser;
+        _recoveryCodes = recoveryCodes;
     }
 
     // ── GET /api/auth/mfa/status ──────────────────────────────────────────
@@ -62,18 +73,32 @@ public class MfaController : ControllerBase
     [HttpPost("setup")]
     [Authorize]
     [ProducesResponseType(typeof(ApiResponse<MfaSetupResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 503)]
     public async Task<IActionResult> Setup(CancellationToken ct)
     {
-        var response = await _mfa.BeginSetupAsync(_currentUser.AdvogadoId, _currentUser.Email, ct);
-        return Ok(ApiResponse<MfaSetupResponse>.Ok(response));
+        try
+        {
+            var response = await _mfa.BeginSetupAsync(_currentUser.AdvogadoId, _currentUser.Email, ct);
+            return Ok(ApiResponse<MfaSetupResponse>.Ok(response));
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("MFA") || ex.Message.Contains("EncryptionKey"))
+        {
+            // MfaSettings:EncryptionKey não configurado → DisabledMfaService ativo.
+            // Retorna 503 com mensagem amigável em vez de 500.
+            return StatusCode(503, ApiResponse<object>.Fail(
+                "O serviço de autenticação de dois fatores não está habilitado neste servidor. " +
+                "Configure MfaSettings:EncryptionKey nos segredos da aplicação."));
+        }
     }
 
     // ── POST /api/auth/mfa/verify-setup ──────────────────────────────────
     // Step 2 of setup: confirm the first TOTP code — activates MFA.
+    // B10: Após ativar, gera os 10 recovery codes e os inclui na resposta.
+    // Frontend exibe os códigos no Passo 3 — ÚNICA oportunidade de visualização.
 
     [HttpPost("verify-setup")]
     [Authorize]
-    [ProducesResponseType(typeof(ApiResponse<MfaStatusResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<MfaActivatedResponse>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]
     public async Task<IActionResult> VerifySetup([FromBody] MfaVerifySetupRequest request, CancellationToken ct)
     {
@@ -82,7 +107,11 @@ public class MfaController : ControllerBase
             return BadRequest(ApiResponse<object>.Fail(
                 "Código inválido ou sessão de setup expirada. Reinicie o processo.", statusCode: 400));
 
-        return Ok(ApiResponse<MfaStatusResponse>.Ok(new MfaStatusResponse(true)));
+        // B10: Gera os 10 códigos de recuperação e retorna o plaintext na resposta.
+        // GenerateCodesAsync invalida quaisquer códigos anteriores antes de criar novos.
+        var codes = await _recoveryCodes.GenerateCodesAsync(_currentUser.AdvogadoId, ct);
+
+        return Ok(ApiResponse<MfaActivatedResponse>.Ok(new MfaActivatedResponse(true, codes)));
     }
 
     // ── DELETE /api/auth/mfa/disable ──────────────────────────────────────
@@ -98,6 +127,10 @@ public class MfaController : ControllerBase
         if (!ok)
             return BadRequest(ApiResponse<object>.Fail(
                 "Código inválido. Confirme o código do Google Authenticator.", statusCode: 400));
+
+        // B11: Ao desativar o MFA, deleta todos os recovery codes do advogado (hard delete).
+        // Evita que códigos orfãos consumam espaço e não possam mais ser usados para login.
+        await _recoveryCodes.DeleteAllAsync(_currentUser.AdvogadoId, ct);
 
         return Ok(ApiResponse<MfaStatusResponse>.Ok(new MfaStatusResponse(false)));
     }

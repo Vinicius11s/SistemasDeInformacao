@@ -30,7 +30,7 @@ public class DomainEntityBuildersTests
             .WithNome("Cliente X")
             .Build();
 
-        cliente.IdAdvogado.Should().Be(advogadoId);
+        cliente.AdvogadoId.Should().Be(advogadoId);
         cliente.NomeCompleto.Should().Be("Cliente X");
     }
 
@@ -45,8 +45,8 @@ public class DomainEntityBuildersTests
             .WithNumeroProcesso("0000000-00.2024.8.26.0100")
             .Build();
 
-        processo.IdAdvogado.Should().Be(advogadoId);
-        processo.IdCliente.Should().Be(clienteId);
+        processo.AdvogadoId.Should().Be(advogadoId);
+        processo.ClienteId.Should().Be(clienteId);
         processo.NumProcesso.Should().Contain("2024");
     }
 }
