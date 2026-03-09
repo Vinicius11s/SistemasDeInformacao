@@ -23,6 +23,7 @@ export interface Cliente {
   complemento?: string;
   cidade?: string;
   estado?: string;            // 2 chars, ex.: "SP"
+  is_active?: boolean;
   data_cadastro?: string;     // "YYYY-MM-DD"
 }
 

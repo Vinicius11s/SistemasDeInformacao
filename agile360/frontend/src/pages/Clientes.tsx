@@ -307,15 +307,15 @@ export function Clientes() {
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <div>
-      {/* Cabeçalho */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-[var(--color-text)]">Clientes</h1>
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={abrirImportar} className="flex items-center gap-2">
+      {/* Cabeçalho — empilha no mobile, botões touch 44px */}
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <h1 className="text-xl font-semibold text-[var(--color-text)] sm:text-2xl">Clientes</h1>
+        <div className="flex flex-col gap-2 sm:flex-row sm:gap-2">
+          <Button variant="secondary" onClick={abrirImportar} className="min-h-[44px] w-full sm:w-auto flex items-center justify-center gap-2">
             <IconImport />
             Cadastro em massa
           </Button>
-          <Button variant="primary" onClick={abrirCriar}>
+          <Button variant="primary" onClick={abrirCriar} className="min-h-[44px] w-full sm:w-auto">
             + Novo cliente
           </Button>
         </div>
@@ -329,52 +329,93 @@ export function Clientes() {
       ) : clientes.length === 0 ? (
         <p className="text-[var(--color-text-muted)]">Nenhum cliente cadastrado ainda.</p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
-          <table className="min-w-full text-sm text-[var(--color-text)]">
-            <thead className="bg-[var(--color-surface)] text-[var(--color-text-muted)] text-xs uppercase tracking-wider">
-              <tr>
-                {['Nome', 'Tipo', 'CPF / CNPJ', 'Telefone', 'Cidade / UF', 'Ações'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--color-border)]">
-              {clientes.map(c => (
-                <tr key={c.id} className="hover:bg-[var(--color-surface)] transition-colors">
-                  <td className="px-4 py-3 font-medium">{c.nome_completo}</td>
-                  <td className="px-4 py-3 text-xs text-[var(--color-text-muted)]">
-                    {c.tipo_cliente === 'Pessoa Jurídica' ? 'PJ' : 'PF'}
-                  </td>
-                  <td className="px-4 py-3">
-                    {c.cpf
-                      ? c.tipo_cliente === 'Pessoa Jurídica'
-                        ? maskCnpj(c.cpf)
-                        : maskCpf(c.cpf)
-                      : '—'}
-                  </td>
-                  <td className="px-4 py-3">
-                    {c.telefone ? maskTelefone(c.telefone) : '—'}
-                  </td>
-                  <td className="px-4 py-3">
-                    {[c.cidade, c.estado].filter(Boolean).join(' / ') || '—'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => abrirEditar(c)}
-                        className="text-[var(--color-primary)] hover:underline text-xs"
-                      >Editar</button>
-                      <button
-                        onClick={() => excluir(c.id)}
-                        className="text-[var(--color-error)] hover:underline text-xs"
-                      >Excluir</button>
-                    </div>
-                  </td>
+        <>
+          {/* Mobile: cards roláveis — uso com uma mão */}
+          <div className="flex flex-col gap-3 md:hidden">
+            {clientes.map(c => (
+              <article
+                key={c.id}
+                className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm"
+              >
+                <p className="font-semibold text-[var(--color-text-heading)]">{c.nome_completo}</p>
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  {c.tipo_cliente === 'Pessoa Jurídica' ? 'PJ' : 'PF'}
+                  {c.cpf && ` · ${c.tipo_cliente === 'Pessoa Jurídica' ? maskCnpj(c.cpf) : maskCpf(c.cpf)}`}
+                </p>
+                {c.telefone && (
+                  <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{maskTelefone(c.telefone)}</p>
+                )}
+                {[c.cidade, c.estado].filter(Boolean).length > 0 && (
+                  <p className="text-sm text-[var(--color-text-muted)]">{[c.cidade, c.estado].filter(Boolean).join(' / ')}</p>
+                )}
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => abrirEditar(c)}
+                    className="min-h-[44px] min-w-[44px] flex-1 rounded-[var(--radius)] border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-primary)] touch-manipulation"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => excluir(c.id)}
+                    className="min-h-[44px] min-w-[44px] flex-1 rounded-[var(--radius)] border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-error)] touch-manipulation"
+                  >
+                    Excluir
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          {/* Desktop: tabela */}
+          <div className="hidden overflow-x-auto rounded-xl border border-[var(--color-border)] md:block">
+            <table className="min-w-full text-sm text-[var(--color-text)]">
+              <thead className="bg-[var(--color-surface)] text-[var(--color-text-muted)] text-xs uppercase tracking-wider">
+                <tr>
+                  {['Nome', 'Tipo', 'CPF / CNPJ', 'Telefone', 'Cidade / UF', 'Ações'].map(h => (
+                    <th key={h} className="px-4 py-3 text-left">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-[var(--color-border)]">
+                {clientes.map(c => (
+                  <tr key={c.id} className="hover:bg-[var(--color-surface)] transition-colors">
+                    <td className="px-4 py-3 font-medium">{c.nome_completo}</td>
+                    <td className="px-4 py-3 text-xs text-[var(--color-text-muted)]">
+                      {c.tipo_cliente === 'Pessoa Jurídica' ? 'PJ' : 'PF'}
+                    </td>
+                    <td className="px-4 py-3">
+                      {c.cpf
+                        ? c.tipo_cliente === 'Pessoa Jurídica'
+                          ? maskCnpj(c.cpf)
+                          : maskCpf(c.cpf)
+                        : '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      {c.telefone ? maskTelefone(c.telefone) : '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      {[c.cidade, c.estado].filter(Boolean).join(' / ') || '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => abrirEditar(c)}
+                          className="text-[var(--color-primary)] hover:underline text-xs"
+                        >Editar</button>
+                        <button
+                          onClick={() => excluir(c.id)}
+                          className="text-[var(--color-error)] hover:underline text-xs"
+                        >Excluir</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {/* ═══ Modal Novo / Editar ════════════════════════════════════════════════ */}
@@ -405,7 +446,7 @@ export function Clientes() {
                   {(['Pessoa Física', 'Pessoa Jurídica'] as const).map(tipo => (
                     <label
                       key={tipo}
-                      className={`flex items-center gap-2 cursor-pointer rounded-lg border px-4 py-2 text-sm transition-colors
+                      className={`flex min-h-[44px] min-w-[44px] flex-1 items-center justify-center gap-2 cursor-pointer rounded-lg border px-4 py-3 text-sm transition-colors touch-manipulation
                         ${form.tipo_cliente === tipo
                           ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-medium'
                           : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/50'}`}

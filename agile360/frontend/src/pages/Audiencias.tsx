@@ -8,7 +8,6 @@ import {
   type Compromisso,
   type CriarCompromissoPayload,
   type TipoCompromisso,
-  type StatusCompromisso,
   compromissosApi,
 } from '../api/compromissos';
 import { clientesApi, type Cliente } from '../api/clientes';
@@ -18,14 +17,13 @@ import { processosApi, type Processo } from '../api/processos';
 
 const TIPOS_COMPROMISSO: TipoCompromisso[] = ['Audiência', 'Atendimento', 'Reunião', 'Prazo'];
 const TIPOS_AUDIENCIA = ['Conciliação', 'Instrução e Julgamento', 'Una', 'Inicial'];
-const STATUS_OPTIONS: StatusCompromisso[] = ['Agendado', 'Concluído', 'Cancelado'];
 
 type FormState = Omit<CriarCompromissoPayload, never>;
 
 const EMPTY_FORM: FormState = {
   tipo_compromisso: 'Audiência',
   tipo_audiencia:   '',
-  status:           'Agendado',
+  is_active:        true,
   data:             '',
   hora:             '',
   local:            '',
@@ -93,7 +91,7 @@ export function Audiencias() {
     setForm({
       tipo_compromisso: c.tipo_compromisso,
       tipo_audiencia:   c.tipo_audiencia ?? '',
-      status:           c.status,
+      is_active:        c.is_active,
       data:             c.data,
       hora:             c.hora.substring(0, 5),   // HH:mm
       local:            c.local ?? '',
@@ -146,17 +144,19 @@ export function Audiencias() {
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
       setForm(f => ({
         ...f,
-        [field]: e.target.type === 'number'
-          ? (e.target.value === '' ? undefined : Number(e.target.value))
-          : e.target.value || undefined,
+        [field]: e.target.type === 'checkbox'
+          ? (e.target as HTMLInputElement).checked
+          : e.target.type === 'number'
+            ? (e.target.value === '' ? undefined : Number(e.target.value))
+            : e.target.value || undefined,
       }));
 
   // ─── Render ─────────────────────────────────────────────────────────────
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-[var(--color-text)]">Compromissos</h1>
-        <Button variant="primary" onClick={abrirCriar}>+ Novo compromisso</Button>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl font-semibold text-[var(--color-text)] sm:text-2xl">Compromissos</h1>
+        <Button variant="primary" onClick={abrirCriar} className="w-full sm:w-auto min-h-[44px]">+ Novo compromisso</Button>
       </div>
 
       {carregando ? (
@@ -166,40 +166,91 @@ export function Audiencias() {
       ) : compromissos.length === 0 ? (
         <p className="text-[var(--color-text-muted)]">Nenhum compromisso cadastrado ainda.</p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
-          <table className="min-w-full text-sm text-[var(--color-text)]">
-            <thead className="bg-[var(--color-surface)] text-[var(--color-text-muted)] text-xs uppercase tracking-wider">
-              <tr>
-                {['Tipo', 'Data', 'Hora', 'Cliente', 'Processo', 'Status', 'Ações'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--color-border)]">
-              {compromissos
-                .sort((a, b) => a.data.localeCompare(b.data))
-                .map(c => (
-                  <tr key={c.id} className="hover:bg-[var(--color-surface)] transition-colors">
-                    <td className="px-4 py-3">
-                      <span className="font-medium">{c.tipo_compromisso}</span>
-                      {c.tipo_audiencia && <span className="block text-xs text-[var(--color-text-muted)]">{c.tipo_audiencia}</span>}
-                    </td>
-                    <td className="px-4 py-3">{new Date(c.data + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
-                    <td className="px-4 py-3">{c.hora.substring(0, 5)}</td>
-                    <td className="px-4 py-3">{nomeCliente(c.id_cliente)}</td>
-                    <td className="px-4 py-3 font-mono text-xs">{numProcesso(c.id_processo)}</td>
-                    <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2">
-                        <button onClick={() => abrirEditar(c)} className="text-[var(--color-primary)] hover:underline text-xs">Editar</button>
-                        <button onClick={() => excluir(c.id)} className="text-[var(--color-error)] hover:underline text-xs">Excluir</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          {/* Mobile: cards roláveis — uma mão, sem tabela que vaza */}
+          <div className="flex flex-col gap-3 md:hidden">
+            {[...compromissos]
+              .sort((a, b) => a.data.localeCompare(b.data))
+              .map(c => (
+                <article
+                  key={c.id}
+                  className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-[var(--color-text-heading)]">{c.tipo_compromisso}</p>
+                      {c.tipo_audiencia && (
+                        <p className="text-xs text-[var(--color-text-muted)]">{c.tipo_audiencia}</p>
+                      )}
+                      <p className="mt-1 text-sm text-[var(--color-text)]">
+                        {new Date(c.data + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })}
+                        {' · '}{c.hora.substring(0, 5)}
+                      </p>
+                      {nomeCliente(c.id_cliente) !== '—' && (
+                        <p className="mt-0.5 text-sm text-[var(--color-text-secondary)]">Cliente: {nomeCliente(c.id_cliente)}</p>
+                      )}
+                      {numProcesso(c.id_processo) !== '—' && (
+                        <p className="font-mono text-xs text-[var(--color-text-muted)]">{numProcesso(c.id_processo)}</p>
+                      )}
+                    </div>
+                    <StatusBadge isActive={c.is_active} />
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => abrirEditar(c)}
+                      className="min-h-[44px] min-w-[44px] flex-1 rounded-[var(--radius)] border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-primary)] touch-manipulation"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => excluir(c.id)}
+                      className="min-h-[44px] min-w-[44px] flex-1 rounded-[var(--radius)] border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-error)] touch-manipulation"
+                    >
+                      Excluir
+                    </button>
+                  </div>
+                </article>
+              ))}
+          </div>
+
+          {/* Desktop: tabela */}
+          <div className="hidden overflow-x-auto rounded-xl border border-[var(--color-border)] md:block">
+            <table className="min-w-full text-sm text-[var(--color-text)]">
+              <thead className="bg-[var(--color-surface)] text-[var(--color-text-muted)] text-xs uppercase tracking-wider">
+                <tr>
+                  {['Tipo', 'Data', 'Hora', 'Cliente', 'Processo', 'Status', 'Ações'].map(h => (
+                    <th key={h} className="px-4 py-3 text-left">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--color-border)]">
+                {compromissos
+                  .sort((a, b) => a.data.localeCompare(b.data))
+                  .map(c => (
+                    <tr key={c.id} className="hover:bg-[var(--color-surface)] transition-colors">
+                      <td className="px-4 py-3">
+                        <span className="font-medium">{c.tipo_compromisso}</span>
+                        {c.tipo_audiencia && <span className="block text-xs text-[var(--color-text-muted)]">{c.tipo_audiencia}</span>}
+                      </td>
+                      <td className="px-4 py-3">{new Date(c.data + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
+                      <td className="px-4 py-3">{c.hora.substring(0, 5)}</td>
+                      <td className="px-4 py-3">{nomeCliente(c.id_cliente)}</td>
+                      <td className="px-4 py-3 font-mono text-xs">{numProcesso(c.id_processo)}</td>
+                      <td className="px-4 py-3"><StatusBadge isActive={c.is_active} /></td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <button onClick={() => abrirEditar(c)} className="text-[var(--color-primary)] hover:underline text-xs">Editar</button>
+                          <button onClick={() => excluir(c.id)} className="text-[var(--color-error)] hover:underline text-xs">Excluir</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {/* Modal */}
@@ -232,13 +283,16 @@ export function Audiencias() {
               </div>
             )}
 
-            {/* Status */}
-            <div className="flex flex-col gap-1">
-              <label className="text-sm text-[var(--color-text-muted)]">Status</label>
-              <select value={form.status} onChange={set('status')}
-                className="min-h-[44px] rounded-[var(--radius)] bg-[var(--color-surface)] border border-[var(--color-border)] px-3 text-[var(--color-text)] focus:border-[var(--color-primary)] focus:outline-none">
-                {STATUS_OPTIONS.map(s => <option key={s}>{s}</option>)}
-              </select>
+            {/* Ativo */}
+            <div className="flex min-h-[44px] items-center gap-2">
+              <input
+                type="checkbox"
+                id="form-is_active"
+                checked={form.is_active}
+                onChange={set('is_active')}
+                className="h-4 w-4 rounded border-[var(--color-border)] accent-[var(--color-primary)]"
+              />
+              <label htmlFor="form-is_active" className="text-sm text-[var(--color-text)]">Compromisso ativo</label>
             </div>
 
             <Input label="Data *" name="data" type="date" value={form.data} onChange={set('data')} />
@@ -290,15 +344,10 @@ export function Audiencias() {
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    Agendado:  'bg-orange-500/15 text-orange-400',
-    Concluído: 'bg-green-500/15 text-green-400',
-    Cancelado: 'bg-red-500/15 text-red-400',
-  };
+function StatusBadge({ isActive }: { isActive: boolean }) {
   return (
-    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${colors[status] ?? 'bg-gray-500/15 text-gray-400'}`}>
-      {status}
+    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${isActive ? 'bg-green-500/15 text-green-400' : 'bg-red-500/15 text-red-400'}`}>
+      {isActive ? 'Ativo' : 'Inativo'}
     </span>
   );
 }

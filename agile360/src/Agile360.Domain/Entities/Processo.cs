@@ -2,47 +2,51 @@ namespace Agile360.Domain.Entities;
 
 /// <summary>
 /// Tabela: processo
-/// Serialização SnakeCaseLower:
-///   IdCliente → id_cliente, NumProcesso → num_processo, etc.
+/// Schema real: id_advogado, id_cliente, num_processo, status (text), criado_em (date), etc.
 /// </summary>
 public class Processo : BaseEntity
 {
-    /// <summary>id_cliente — uuid (FK para cliente)</summary>
-    public Guid IdCliente { get; set; }
+    // id_cliente
+    public Guid? ClienteId { get; set; }
 
-    /// <summary>num_processo — text (ex.: 0000000-00.2026.8.26.0000)</summary>
+    // num_processo
     public string NumProcesso { get; set; } = string.Empty;
 
-    /// <summary>status — text (Ativo, Suspenso, Arquivado, Encerrado)</summary>
-    public string Status { get; set; } = "Ativo";
-
-    /// <summary>parte_contraria — text</summary>
+    // parte_contraria
     public string? ParteContraria { get; set; }
 
-    /// <summary>tribunal — text (TJSP, TRT2, JFPR, STF…)</summary>
+    // tribunal
     public string? Tribunal { get; set; }
 
-    /// <summary>comarca_vara — text (ex.: 2ª Vara Cível de Presidente Prudente)</summary>
+    // comarca_vara
     public string? ComarcaVara { get; set; }
 
-    /// <summary>assunto — text (Danos Morais, Reclamação Trabalhista…)</summary>
+    // assunto
     public string? Assunto { get; set; }
 
-    /// <summary>valor_causa — numeric</summary>
+    // valor_causa
     public decimal? ValorCausa { get; set; }
 
-    /// <summary>honorarios_estimados — numeric</summary>
+    // honorarios_estimados
     public decimal? HonorariosEstimados { get; set; }
 
-    /// <summary>fase_processual — text (Conhecimento, Recursal, Execução)</summary>
+    // fase_processual
     public string? FaseProcessual { get; set; }
 
-    /// <summary>data_distribuicao — date</summary>
+    // status
+    public string Status { get; set; } = "Ativo";
+
+    // data_distribuicao
     public DateOnly? DataDistribuicao { get; set; }
 
-    /// <summary>observacoes — text</summary>
+    // criado_em (date — não timestamptz)
+    public DateOnly CriadoEm { get; set; } = DateOnly.FromDateTime(DateTime.UtcNow);
+
+    // observacoes
     public string? Observacoes { get; set; }
 
-    /// <summary>criado_em — date (DEFAULT now() no Supabase)</summary>
-    public DateOnly? CriadoEm { get; set; }
+    // ─── Aliases para compatibilidade com código existente ──────────────────
+    public string? Comarca => ComarcaVara;
+    public string? TipoAcao => Assunto;
+    public string NumeroProcesso => NumProcesso;
 }

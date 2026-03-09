@@ -11,4 +11,12 @@ public interface IAuthService
     Task ForgotPasswordAsync(string email, CancellationToken cancellationToken = default);
     Task ResetPasswordAsync(string token, string newPassword, CancellationToken cancellationToken = default);
     Task<AdvogadoProfileResponse?> GetProfileAsync(string accessToken, CancellationToken cancellationToken = default);
+
+    // ─── MFA ──────────────────────────────────────────────────────────────────
+
+    /// <summary>Valida o token temporário de MFA e retorna o advogadoId, ou null se inválido/expirado.</summary>
+    Guid? ValidateMfaTempToken(string tempToken);
+
+    /// <summary>Finaliza o challenge de MFA e emite tokens completos.</summary>
+    Task<AuthResult?> CompleteMfaChallengeAsync(string tempToken, string totpCode, CancellationToken cancellationToken = default);
 }

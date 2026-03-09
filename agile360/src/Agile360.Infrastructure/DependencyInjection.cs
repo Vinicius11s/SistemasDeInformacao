@@ -5,6 +5,7 @@ using Agile360.Infrastructure.Auth;
 using Agile360.Infrastructure.Data;
 using Agile360.Infrastructure.Integration;
 using Agile360.Infrastructure.Repositories;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -18,23 +19,47 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructureServices(
         this IServiceCollection services, IConfiguration configuration)
     {
-        // ─── Supabase Auth (GoTrue) ─────────────────────────────────────────────
+        // ─── EF Core + PostgreSQL ───────────────────────────────────────────────────
+        // Lê "DefaultConnection" (User Secrets) ou "Supabase" como fallback,
+        // garantindo compatibilidade com qualquer nome que tenha sido configurado.
+        var connectionString =
+            configuration.GetConnectionString("DefaultConnection")
+            ?? configuration.GetConnectionString("Supabase")
+            ?? throw new InvalidOperationException(
+                "Connection string não encontrada. Configure 'DefaultConnection' via User Secrets:\n" +
+                "dotnet user-secrets set \"ConnectionStrings:DefaultConnection\" \"Host=db.xxx.supabase.co;...\"");
+
+        services.AddDbContext<Agile360DbContext>((sp, options) =>
+        {
+            options.UseNpgsql(connectionString, npgsql =>
+            {
+                npgsql.CommandTimeout(60);
+            })
+            .UseSnakeCaseNamingConvention(); // Converte PascalCase → snake_case globalmente (ex: TipoCompromisso → tipo_compromisso)
+        });
+
+        // ─── Supabase Auth (GoTrue) ─────────────────────────────────────────────────
         services.Configure<SupabaseAuthOptions>(configuration.GetSection(SupabaseAuthOptions.SectionName));
         services.AddHttpClient<SupabaseAuthClient>();
 
-        // ─── Supabase Data API (PostgREST) ──────────────────────────────────────
-        // O construtor de SupabaseDataClient já configura BaseAddress e o header
-        // apikey via IOptions<SupabaseAuthOptions>. Não duplicar aqui.
+        // ─── Supabase Data API (PostgREST — usado somente por AuthService) ──────────
         services.AddHttpClient<SupabaseDataClient>();
 
-        // ─── Auth & Identidade ──────────────────────────────────────────────────
+        // ─── Auth & Identidade ───────────────────────────────────────────────────────
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
 
-        // ─── Webhook ────────────────────────────────────────────────────────────
+        // MFA: obrigatório apenas se MfaSettings:EncryptionKey estiver definido; caso contrário usa stub para não quebrar a API.
+        var mfaEncryptionKey = configuration["MfaSettings:EncryptionKey"];
+        if (!string.IsNullOrWhiteSpace(mfaEncryptionKey))
+            services.AddScoped<IMfaService, MfaService>();
+        else
+            services.AddScoped<IMfaService, DisabledMfaService>();
+
+        // ─── Webhook ─────────────────────────────────────────────────────────────────
         services.AddSingleton<IWebhookSignatureValidator, WebhookSignatureValidator>();
 
-        // ─── n8n / AI Gateway ───────────────────────────────────────────────────
+        // ─── n8n / AI Gateway ────────────────────────────────────────────────────────
         services.Configure<N8nOptions>(configuration.GetSection(N8nOptions.SectionName));
         services.AddHttpClient("Agile360.AI", (sp, client) =>
         {
@@ -52,23 +77,22 @@ public static class DependencyInjection
 
         services.AddScoped<IAiGatewayService, N8nAiGatewayService>();
 
-        // ─── Repositórios (PostgREST) ───────────────────────────────────────────
+        // ─── Repositórios (EF Core) ──────────────────────────────────────────────────
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IClienteRepository,     ClienteRepository>();
         services.AddScoped<IProcessoRepository,    ProcessoRepository>();
         services.AddScoped<ICompromissoRepository, CompromissoRepository>();
         services.AddScoped<IPrazoRepository,       PrazoRepository>();
+        services.AddScoped<IApiKeyRepository,      ApiKeyRepository>();
 
-        // ─── Health Check ────────────────────────────────────────────────────────
-        // Verificação básica de liveness; adicione AspNetCore.HealthChecks.Uris
-        // se quiser um ping HTTP dedicado ao Supabase Data API.
+        // ─── Health Check ─────────────────────────────────────────────────────────────
         services.AddHealthChecks();
 
         return services;
     }
 
-    // ─── Polly ───────────────────────────────────────────────────────────────────
+    // ─── Polly ────────────────────────────────────────────────────────────────────────
 
     private static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy() =>
         HttpPolicyExtensions

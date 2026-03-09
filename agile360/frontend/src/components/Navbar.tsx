@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { Scale } from 'lucide-react';
 
 interface NavbarProps {
   isAuthenticated?: boolean;
@@ -19,16 +18,9 @@ export function Navbar({ isAuthenticated, userName, onLogout }: NavbarProps) {
       {/* Logotipo */}
       <Link
         to="/"
-        className="flex items-center gap-2 no-underline"
+        className="no-underline"
         aria-label="Ir para a página inicial do Agile360"
       >
-        <span
-          className="flex h-7 w-7 items-center justify-center rounded"
-          style={{ background: '#D95F00', color: '#fff', borderRadius: 4 }}
-          aria-hidden="true"
-        >
-          <Scale size={14} strokeWidth={2.5} />
-        </span>
         <span
           className="text-base font-bold"
           style={{ color: 'var(--lp-text-1, var(--color-text-heading))' }}

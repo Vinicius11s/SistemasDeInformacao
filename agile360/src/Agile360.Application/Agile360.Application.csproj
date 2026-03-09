@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Agile360.Domain\Agile360.Domain.csproj" />
+    <ProjectReference Include="..\Agile360.Shared\Agile360.Shared.csproj" />
   </ItemGroup>
 
 </Project>

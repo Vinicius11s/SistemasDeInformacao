@@ -13,6 +13,12 @@ import { Clientes } from './pages/Clientes';
 import { Processos } from './pages/Processos';
 import { Audiencias } from './pages/Audiencias';
 import { Prazos } from './pages/Prazos';
+import { StagingClientes } from './pages/StagingClientes';
+import { MfaChallenge } from './pages/MfaChallenge';
+import { SecuritySettings } from './pages/SecuritySettings';
+import { MinhaConta } from './pages/MinhaConta';
+import { SettingsPlaceholder } from './pages/SettingsPlaceholder';
+import { SettingsLayout } from './layouts/SettingsLayout';
 
 function App() {
   return (
@@ -24,6 +30,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/mfa-challenge" element={<MfaChallenge />} />
         </Route>
         <Route
           path="/app"
@@ -38,6 +45,14 @@ function App() {
           <Route path="processos" element={<Processos />} />
           <Route path="audiencias" element={<Audiencias />} />
           <Route path="prazos" element={<Prazos />} />
+          <Route path="staging" element={<StagingClientes />} />
+          <Route path="configuracoes" element={<SettingsLayout />}>
+            <Route index element={<Navigate to="/app/configuracoes/minha-conta" replace />} />
+            <Route path="minha-conta" element={<MinhaConta />} />
+            <Route path="seguranca" element={<SecuritySettings />} />
+            <Route path="notificacoes" element={<SettingsPlaceholder />} />
+            <Route path="integracoes" element={<SettingsPlaceholder />} />
+          </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

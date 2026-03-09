@@ -253,8 +253,9 @@ function WeeklyCalendar({
         </span>
       </div>
 
-      {/* Grid Seg → Sex */}
-      <div className="grid grid-cols-5" style={{ borderTop: '1px solid transparent' }}>
+      {/* Grid Seg → Sex — scroll horizontal no mobile para caber 360px */}
+      <div className="overflow-x-auto">
+        <div className="grid min-w-[320px] grid-cols-5" style={{ borderTop: '1px solid transparent' }}>
         {dias.map((dia, idx) => {
           const { abrev, num, isHoje } = formatarDiaSemana(dia);
           const eventos = porDia(dia);
@@ -363,6 +364,7 @@ function WeeklyCalendar({
             </div>
           );
         })}
+        </div>
       </div>
 
       {/* Legenda inline — rodapé do calendário */}
@@ -813,7 +815,7 @@ export function DashboardHome() {
       {/* ── Grid de indicadores ───────────────────────────────── */}
       <div>
         <SectionLabel>Resumo de Hoje</SectionLabel>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <SummaryCard
             label="Audiências"
             value={contadores?.audiencias_hoje ?? 0}

@@ -219,3 +219,12 @@ option {
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
+
+/* ─── Mobile-First: alvos de toque mínimos 44×44px ───────────────────────── */
+@media (pointer: coarse) {
+  button:not([class*="min-h-"]):not([class*="min-w-"]),
+  a[role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

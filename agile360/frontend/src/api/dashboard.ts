@@ -12,7 +12,7 @@ export interface DashboardContadores {
 export interface CompromissoDashboard {
   id:           string;
   tipo:         string;   // 'Audiência' | 'Atendimento' | 'Reunião' | 'Prazo'
-  status:       string;
+  is_active:    boolean;
   data:         string;   // "yyyy-MM-dd"
   hora:         string;   // "HH:mm"
   local?:       string;

@@ -1,71 +1,61 @@
+using Agile360.Domain.Enums;
+
 namespace Agile360.Domain.Entities;
 
 /// <summary>
 /// Tabela: cliente
-/// Serialização: JsonNamingPolicy.SnakeCaseLower converte automaticamente
-///   NomeCompleto → nome_completo, OrgaoExpedidor → orgao_expedidor, etc.
+/// Suporta Pessoa Física (tipo_cliente = 'Pessoa Física') e
+/// Pessoa Jurídica (tipo_cliente = 'Pessoa Jurídica').
 /// </summary>
 public class Cliente : BaseEntity
 {
-    // ─── Identificação ───────────────────────────────────────────────────────────
-    /// <summary>tipo_cliente — text ('Pessoa Física' | 'Pessoa Jurídica')</summary>
+    // tipo_cliente
     public string TipoCliente { get; set; } = "Pessoa Física";
 
-    /// <summary>nome_completo — text</summary>
-    public string NomeCompleto { get; set; } = string.Empty;
-
-    /// <summary>cpf — text</summary>
-    public string? Cpf { get; set; }
-
-    /// <summary>rg — text</summary>
-    public string? Rg { get; set; }
-
-    /// <summary>orgao_expedidor — text</summary>
+    // ─── Pessoa Física ──────────────────────────────────────────────────────
+    public string? NomeCompleto { get; set; }
+    public string? CPF { get; set; }
+    public string? RG { get; set; }
     public string? OrgaoExpedidor { get; set; }
 
-    /// <summary>data_nascimento — date</summary>
-    public DateOnly? DataNascimento { get; set; }
+    // ─── Pessoa Jurídica ────────────────────────────────────────────────────
+    public string? RazaoSocial { get; set; }
+    public string? CNPJ { get; set; }
+    public string? InscricaoEstadual { get; set; }
 
-    /// <summary>estado_civil — text</summary>
-    public string? EstadoCivil { get; set; }
-
-    /// <summary>profissao — text</summary>
-    public string? Profissao { get; set; }
-
-    // ─── Contato ─────────────────────────────────────────────────────────────────
-    /// <summary>telefone — text</summary>
+    // ─── Contato ────────────────────────────────────────────────────────────
     public string? Telefone { get; set; }
 
-    // ─── Financeiro ───────────────────────────────────────────────────────────────
-    /// <summary>numero_conta — text</summary>
-    public string? NumeroConta { get; set; }
-
-    /// <summary>pix — text</summary>
-    public string? Pix { get; set; }
-
-    // ─── Endereço ────────────────────────────────────────────────────────────────
-    /// <summary>cep — text</summary>
-    public string? Cep { get; set; }
-
-    /// <summary>endereco — text (logradouro)</summary>
+    // ─── Endereço ───────────────────────────────────────────────────────────
+    public string? CEP { get; set; }
+    public string? Estado { get; set; }
+    public string? Cidade { get; set; }
     public string? Endereco { get; set; }
-
-    /// <summary>numero — text</summary>
     public string? Numero { get; set; }
-
-    /// <summary>bairro — text</summary>
     public string? Bairro { get; set; }
-
-    /// <summary>complemento — text</summary>
     public string? Complemento { get; set; }
 
-    /// <summary>cidade — text</summary>
-    public string? Cidade { get; set; }
+    // ─── Dados adicionais ───────────────────────────────────────────────────
+    public DateOnly? DataReferencia { get; set; }
+    public string? EstadoCivil { get; set; }
+    public string? AreaAtuacao { get; set; }
+    public string? NumeroConta { get; set; }
+    public string? Pix { get; set; }
+    // is_active (bool) — substitui o antigo status texto; herdado de BaseEntity e mapeado em cliente.is_active
+    public DateOnly DataCadastro { get; set; } = DateOnly.FromDateTime(DateTime.UtcNow);
 
-    /// <summary>estado — text (max 2 chars, ex.: "SP")</summary>
-    public string? Estado { get; set; }
+    // ─── Helpers ────────────────────────────────────────────────────────────
+    /// <summary>Nome exibível independente do tipo de pessoa.</summary>
+    public string NomeExibicao => NomeCompleto ?? RazaoSocial ?? "(sem nome)";
 
-    // ─── Auditoria ───────────────────────────────────────────────────────────────
-    /// <summary>data_cadastro — date (DEFAULT now() no Supabase)</summary>
-    public DateOnly? DataCadastro { get; set; }
+    /// <summary>Compatibilidade com código que usa TipoPessoa enum.</summary>
+    public TipoPessoa TipoPessoa => TipoCliente == "Pessoa Jurídica"
+        ? TipoPessoa.PessoaJuridica
+        : TipoPessoa.PessoaFisica;
+
+    /// <summary>Documento principal (CPF ou CNPJ).</summary>
+    public string? Documento => CPF ?? CNPJ;
+
+    public string? Observacoes { get; set; }
+    public OrigemCliente Origem { get; set; } = OrigemCliente.Manual;
 }

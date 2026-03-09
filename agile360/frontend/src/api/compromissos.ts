@@ -3,14 +3,13 @@ import { api } from './client';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type TipoCompromisso  = 'Audiência' | 'Atendimento' | 'Reunião' | 'Prazo';
-export type StatusCompromisso = 'Agendado' | 'Concluído' | 'Cancelado';
 
 export interface Compromisso {
   id: string;
   id_advogado: string;
   tipo_compromisso: TipoCompromisso;
   tipo_audiencia?: string;
-  status: StatusCompromisso;
+  is_active: boolean;
   data: string;              // "YYYY-MM-DD"
   hora: string;              // "HH:mm:ss"
   local?: string;

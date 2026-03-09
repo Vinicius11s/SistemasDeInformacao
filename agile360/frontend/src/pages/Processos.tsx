@@ -137,9 +137,9 @@ export function Processos() {
   // ─── Render ─────────────────────────────────────────────────────────────
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-[var(--color-text)]">Processos</h1>
-        <Button variant="primary" onClick={abrirCriar}>+ Novo processo</Button>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl font-semibold text-[var(--color-text)] sm:text-2xl">Processos</h1>
+        <Button variant="primary" onClick={abrirCriar} className="w-full min-h-[44px] sm:w-auto">+ Novo processo</Button>
       </div>
 
       {carregando ? (
@@ -149,36 +149,61 @@ export function Processos() {
       ) : processos.length === 0 ? (
         <p className="text-[var(--color-text-muted)]">Nenhum processo cadastrado ainda.</p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
-          <table className="min-w-full text-sm text-[var(--color-text)]">
-            <thead className="bg-[var(--color-surface)] text-[var(--color-text-muted)] text-xs uppercase tracking-wider">
-              <tr>
-                {['Nº Processo', 'Cliente', 'Assunto', 'Tribunal', 'Status', 'Ações'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--color-border)]">
-              {processos.map(p => (
-                <tr key={p.id} className="hover:bg-[var(--color-surface)] transition-colors">
-                  <td className="px-4 py-3 font-mono text-xs">{p.num_processo}</td>
-                  <td className="px-4 py-3">{nomeCliente(p.id_cliente)}</td>
-                  <td className="px-4 py-3">{p.assunto ?? '—'}</td>
-                  <td className="px-4 py-3">{p.tribunal ?? '—'}</td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={p.status} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      <button onClick={() => abrirEditar(p)} className="text-[var(--color-primary)] hover:underline text-xs">Editar</button>
-                      <button onClick={() => excluir(p.id)} className="text-[var(--color-error)] hover:underline text-xs">Excluir</button>
-                    </div>
-                  </td>
+        <>
+          <div className="flex flex-col gap-3 md:hidden">
+            {processos.map(p => (
+              <article
+                key={p.id}
+                className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm"
+              >
+                <p className="font-mono text-sm font-medium text-[var(--color-text-heading)]">{p.num_processo}</p>
+                <p className="text-sm text-[var(--color-text-secondary)]">{nomeCliente(p.id_cliente)}</p>
+                {(p.assunto || p.tribunal) && (
+                  <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                    {[p.assunto, p.tribunal].filter(Boolean).join(' · ')}
+                  </p>
+                )}
+                <div className="mt-2">
+                  <StatusBadge status={p.status} />
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <button type="button" onClick={() => abrirEditar(p)}
+                    className="min-h-[44px] min-w-[44px] flex-1 rounded-[var(--radius)] border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-primary)] touch-manipulation">Editar</button>
+                  <button type="button" onClick={() => excluir(p.id)}
+                    className="min-h-[44px] min-w-[44px] flex-1 rounded-[var(--radius)] border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-error)] touch-manipulation">Excluir</button>
+                </div>
+              </article>
+            ))}
+          </div>
+          <div className="hidden overflow-x-auto rounded-xl border border-[var(--color-border)] md:block">
+            <table className="min-w-full text-sm text-[var(--color-text)]">
+              <thead className="bg-[var(--color-surface)] text-[var(--color-text-muted)] text-xs uppercase tracking-wider">
+                <tr>
+                  {['Nº Processo', 'Cliente', 'Assunto', 'Tribunal', 'Status', 'Ações'].map(h => (
+                    <th key={h} className="px-4 py-3 text-left">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-[var(--color-border)]">
+                {processos.map(p => (
+                  <tr key={p.id} className="hover:bg-[var(--color-surface)] transition-colors">
+                    <td className="px-4 py-3 font-mono text-xs">{p.num_processo}</td>
+                    <td className="px-4 py-3">{nomeCliente(p.id_cliente)}</td>
+                    <td className="px-4 py-3">{p.assunto ?? '—'}</td>
+                    <td className="px-4 py-3">{p.tribunal ?? '—'}</td>
+                    <td className="px-4 py-3"><StatusBadge status={p.status} /></td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2">
+                        <button onClick={() => abrirEditar(p)} className="text-[var(--color-primary)] hover:underline text-xs">Editar</button>
+                        <button onClick={() => excluir(p.id)} className="text-[var(--color-error)] hover:underline text-xs">Excluir</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {/* Modal */}

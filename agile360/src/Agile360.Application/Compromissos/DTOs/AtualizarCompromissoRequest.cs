@@ -3,7 +3,7 @@ namespace Agile360.Application.Compromissos.DTOs;
 public record AtualizarCompromissoRequest(
     string    TipoCompromisso,
     string?   TipoAudiencia,
-    string    Status,
+    bool?     IsActive,   // null = não altera
     DateOnly  Data,
     TimeOnly  Hora,
     string?   Local,

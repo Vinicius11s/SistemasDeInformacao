@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using Agile360.Application.Clientes.DTOs;
 using Agile360.Domain.Entities;
+using Agile360.Domain.Enums;
 using Agile360.Domain.Interfaces;
 
 namespace Agile360.Application.Clientes.Services;
@@ -95,35 +96,19 @@ public sealed partial class ClienteBulkImportService(
                 dataNasc = dn;
             }
 
-            // AC-9: validação de estado
-            var estado = linha.Estado?.Trim().ToUpperInvariant();
-            if (!string.IsNullOrEmpty(estado) && estado.Length > 2)
-            {
-                erros.Add(new(linha.Linha, linha.NomeCompleto,
-                    $"estado deve ter no máximo 2 letras (recebido: '{estado}')."));
-                continue;
-            }
-
-            // Linha válida — mapeia para entidade (IdAdvogado será setado pelo repository)
+            // Linha válida — mapeia para entidade (AdvogadoId será setado pelo repository/interceptor)
             paraInserir.Add(new Cliente
             {
+                TipoCliente    = "Pessoa Física",
                 NomeCompleto   = linha.NomeCompleto.Trim(),
-                Cpf            = NullIfEmpty(linha.Cpf),
-                Rg             = NullIfEmpty(linha.Rg),
+                CPF            = NullIfEmpty(linha.Cpf),
+                RG             = NullIfEmpty(linha.Rg),
                 OrgaoExpedidor = NullIfEmpty(linha.OrgaoExpedidor),
-                DataNascimento = dataNasc,
-                EstadoCivil    = NullIfEmpty(linha.EstadoCivil),
-                Profissao      = NullIfEmpty(linha.Profissao),
+                DataReferencia = dataNasc,
+                AreaAtuacao    = NullIfEmpty(linha.Profissao),
                 Telefone       = NullIfEmpty(linha.Telefone),
-                NumeroConta    = NullIfEmpty(linha.NumeroConta),
-                Pix            = NullIfEmpty(linha.Pix),
-                Cep            = NullIfEmpty(linha.Cep),
                 Endereco       = NullIfEmpty(linha.Endereco),
-                Numero         = NullIfEmpty(linha.Numero),
-                Bairro         = NullIfEmpty(linha.Bairro),
-                Complemento    = NullIfEmpty(linha.Complemento),
-                Cidade         = NullIfEmpty(linha.Cidade),
-                Estado         = string.IsNullOrWhiteSpace(estado) ? null : estado,
+                Origem         = OrigemCliente.Manual,
             });
         }
 

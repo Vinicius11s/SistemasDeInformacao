@@ -4,7 +4,7 @@ namespace Agile360.Application.Compromissos.DTOs;
 public record CriarCompromissoRequest(
     string    TipoCompromisso,    // Audiência | Atendimento | Reunião | Prazo
     string?   TipoAudiencia,     // Conciliação | Instrução e Julgamento | ... (só se tipo=Audiência)
-    string    Status,             // Agendado | Concluído | Cancelado
+    bool      IsActive,           // true = ativo/agendado, false = cancelado/inativo
     DateOnly  Data,
     TimeOnly  Hora,
     string?   Local,

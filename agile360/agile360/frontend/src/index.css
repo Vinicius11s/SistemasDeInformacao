@@ -1,0 +1,221 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Agile360 Design System v2.0 — Professional Legal SaaS
+   Paleta: Deep Navy · Charcoal · Slate
+   Objetivo: identidade visual formal para o público jurídico de alto nível.
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  /* ── Superfícies ──────────────────────────────────────────────────────── */
+  --color-bg:              #000000;   /* Preto — fundo base                  */
+  --color-surface:         #000000;   /* Preto — cards, painéis              */
+  --color-surface-elevated:#0d0d0d;   /* Levemente acima do preto puro       */
+  --color-surface-sidebar: #000000;   /* Sidebar preta                       */
+  --color-surface-hover:   #111111;   /* Estado hover de linhas/botões       */
+
+  /* ── Bordas ───────────────────────────────────────────────────────────── */
+  --color-border:          #1e293b;   /* Slate-800 — sutil, não intrusivo    */
+  --color-border-strong:   #2d3f55;   /* Borda mais visível quando necessário*/
+
+  /* ── Acento principal ─────────────────────────────────────────────────── */
+  --color-primary:         #D95F00;   /* Laranja queimado — um tom abaixo do laranja vivo */
+  --color-primary-hover:   #F07010;   /* Laranja levemente mais claro no hover            */
+  --color-primary-muted:   rgba(217,95,0,.12); /* tint sutil em fundos                    */
+  --color-focus-ring:      #F07010;
+
+  /* ── Texto ────────────────────────────────────────────────────────────── */
+  --color-text-heading:    #f1f5f9;   /* slate-100 — títulos e números       */
+  --color-text:            #cbd5e1;   /* slate-300 — corpo de texto          */
+  --color-text-secondary:  #94a3b8;   /* slate-400 — texto secundário        */
+  --color-text-muted:      #64748b;   /* slate-500 — placeholders, rodapés  */
+  --color-white:           #f8fafc;   /* Off-white para alto contraste       */
+
+  /* ── Semânticas ───────────────────────────────────────────────────────── */
+  --color-error:           #f87171;   /* red-400 muted — apenas para crítico */
+  --color-error-bg:        rgba(248,113,113,.08);
+  --color-success:         #34d399;   /* emerald-400 muted                   */
+  --color-warning:         #fbbf24;   /* amber-400 muted — prazos            */
+
+  /* ── Acentos funcionais (calendário / status) ─────────────────────────── */
+  --color-accent-audiencia: #D95F00;  /* Laranja — Audiência (= primário)    */
+  --color-accent-atend:     #475569;  /* Slate escuro — Atendimento          */
+  --color-accent-reuniao:   #334155;  /* Slate mais escuro — Reunião         */
+  --color-accent-prazo:     #f87171;  /* Vermelho muted — Prazo (urgência)   */
+
+  /* ── Tipografia ───────────────────────────────────────────────────────── */
+  --font-ui:             'Inter', system-ui, sans-serif;
+  --font-mono:           'JetBrains Mono', monospace;
+  --text-base:           1rem;
+  --text-sm:             0.875rem;
+  --text-lg:             1.125rem;
+  --text-xl:             1.25rem;
+  --text-2xl:            1.75rem;
+  --text-hero:           2.5rem;
+  --line-height-body:    1.6;
+  --line-height-tight:   1.25;
+
+  /* ── Espaçamento & Forma ─────────────────────────────────────────────── */
+  /* Profissional = menos arredondamento. Evita aparência "app casual".     */
+  --radius:              4px;         /* Forma quadrada — seriedade          */
+  --radius-lg:           6px;         /* Arredondamento mínimo em containers */
+  --input-min-height:    44px;
+  --focus-outline:       2px solid var(--color-focus-ring);
+  --focus-offset:        2px;
+
+  /* ── Letra-espaçamento institucional ─────────────────────────────────── */
+  --tracking-label:      0.06em;      /* Para rótulos em MAIÚSCULAS          */
+
+  /* ── Navegação sidebar ───────────────────────────────────────────────── */
+  --color-nav-active-bg: rgba(217, 95, 0, 0.12); /* item ativo na sidebar   */
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Tema Claro — [data-theme="light"]
+   Mantém o mesmo laranja institucional; apenas troca os fundos e textos.
+   ═══════════════════════════════════════════════════════════════════════════ */
+[data-theme='light'] {
+  /* ── Superfícies ──────────────────────────────────────────────────────── */
+  --color-bg:              #f0f2f5;   /* Cinza muito claro — fundo base      */
+  --color-surface:         #ffffff;   /* Branco — cards, painéis             */
+  --color-surface-elevated:#f4f6f8;   /* Levemente acinzentado               */
+  --color-surface-sidebar: #ffffff;   /* Sidebar branca                      */
+  --color-surface-hover:   #eef0f3;   /* Hover sutil                         */
+
+  /* ── Bordas ───────────────────────────────────────────────────────────── */
+  --color-border:          #dde1e7;   /* Borda clara                         */
+  --color-border-strong:   #b4b9c4;   /* Borda mais visível                  */
+
+  /* ── Acento principal (laranja mantido) ──────────────────────────────── */
+  --color-primary-muted:   rgba(217, 95, 0, 0.09);
+
+  /* ── Texto ────────────────────────────────────────────────────────────── */
+  --color-text-heading:    #0a0e1a;   /* Quase preto — títulos               */
+  --color-text:            #2d3748;   /* Cinza escuro — corpo                */
+  --color-text-secondary:  #4a5568;   /* Cinza médio                         */
+  --color-text-muted:      #718096;   /* Cinza claro                         */
+  --color-white:           #0a0e1a;   /* Inverte uso: alto contraste escuro  */
+
+  /* ── Semânticas ───────────────────────────────────────────────────────── */
+  --color-error:           #c53030;   /* Vermelho mais escuro (melhor no claro) */
+  --color-error-bg:        rgba(197, 48, 48, 0.08);
+  --color-success:         #276749;   /* Verde escuro legível                */
+  --color-warning:         #b7791f;   /* Âmbar escuro legível                */
+
+  /* ── Acentos funcionais ───────────────────────────────────────────────── */
+  --color-accent-atend:    #4a5568;   /* Slate mais escuro no claro          */
+  --color-accent-reuniao:  #718096;   /* Slate médio                         */
+  --color-accent-prazo:    #c53030;   /* Vermelho escuro                     */
+
+  /* ── Navegação sidebar ───────────────────────────────────────────────── */
+  --color-nav-active-bg:   rgba(217, 95, 0, 0.09);
+
+  color-scheme: light;
+}
+
+/* ─── Reset ─────────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Instrui o browser a renderizar controles nativos (calendário, seta de
+     select, scrollbar, autocomplete) no tema escuro */
+  color-scheme: dark;
+}
+
+/* Transição suave ao trocar de tema */
+body,
+.theme-transition,
+.theme-transition * {
+  transition:
+    background-color 0.18s ease,
+    border-color     0.18s ease,
+    color            0.18s ease;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  line-height: var(--line-height-body);
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* ─── Acessibilidade — foco ──────────────────────────────────────────────── */
+:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: var(--focus-offset);
+}
+
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ─── Links ──────────────────────────────────────────────────────────────── */
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--color-primary-hover);
+}
+
+/* ─── Controles de formulário em fundo preto ─────────────────────────────── */
+/* Quando --color-surface = #000 (igual ao fundo), inputs precisam de
+   um background levemente diferente para terem presença visual.              */
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='submit']):not([type='button']),
+select,
+textarea {
+  background-color: var(--color-surface-elevated); /* #0d0d0d — distinguível */
+  color-scheme: dark; /* garante ícones nativos (calendário, relógio) claros  */
+}
+
+/* Ícone de calendário / relógio — fallback explícito para Chrome/Edge */
+input[type='date']::-webkit-calendar-picker-indicator,
+input[type='datetime-local']::-webkit-calendar-picker-indicator,
+input[type='time']::-webkit-calendar-picker-indicator,
+input[type='week']::-webkit-calendar-picker-indicator,
+input[type='month']::-webkit-calendar-picker-indicator {
+  filter: invert(0.75) brightness(1.3);
+  cursor: pointer;
+  opacity: 0.8;
+}
+input[type='date']::-webkit-calendar-picker-indicator:hover,
+input[type='time']::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* Opções do select — fundo escuro para evitar o popup branco do sistema */
+option {
+  background-color: #111827;
+  color: var(--color-text);
+}
+
+/* ─── Utilitários de texto ───────────────────────────────────────────────── */
+.text-heading {
+  color: var(--color-text-heading);
+  letter-spacing: -0.01em;
+}
+
+.label-uppercase {
+  font-size: 0.6875rem;        /* 11px */
+  font-weight: 600;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}

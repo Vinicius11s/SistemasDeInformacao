@@ -1,5 +1,6 @@
 using System.Text;
 using Microsoft.IdentityModel.JsonWebTokens;
+using Agile360.API.Auth;
 using Agile360.API.Middleware;
 using Agile360.API.MultiTenancy;
 using Agile360.Application;
@@ -78,8 +79,18 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 return Task.CompletedTask;
             }
         };
-    });
-builder.Services.AddAuthorization();
+    })
+    .AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(
+        ApiKeyAuthenticationDefaults.AuthenticationScheme, _ => { });
+builder.Services.AddAuthorization(options =>
+{
+    // Qualquer endpoint com [Authorize] aceita JWT *ou* API Key
+    options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder(
+            JwtBearerDefaults.AuthenticationScheme,
+            ApiKeyAuthenticationDefaults.AuthenticationScheme)
+        .RequireAuthenticatedUser()
+        .Build();
+});
 
 // ─── Rate limiting ────────────────────────────────────────────────────────────
 builder.Services.AddRateLimiter(options =>
@@ -143,6 +154,11 @@ app.Use(async (context, next) =>
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<WebhookAuthMiddleware>();
+
+// CORS deve vir antes de UseAuthentication para que os headers de CORS
+// estejam presentes mesmo em respostas de erro (401, 403, 429).
+app.UseCors();
+
 app.UseAuthentication();
 app.UseMiddleware<TenantMiddleware>();
 app.UseAuthorization();
@@ -155,7 +171,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(o => o.SwaggerEndpoint("/swagger/v1/swagger.json", "Agile360 API v1"));
 }
 
-app.UseCors();
 app.MapControllers();
 app.MapHealthChecks("/health");
 

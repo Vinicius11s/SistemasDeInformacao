@@ -34,7 +34,7 @@ public class ClienteController(
 
     // ─── POST /api/clientes ───────────────────────────────────────────────────
     [HttpPost]
-    public async Task<IActionResult> Criar([FromBody] CriarClienteRequest req, CancellationToken ct)
+    public async Task<IActionResult> Criar([FromBody] CreateClienteRequest req, CancellationToken ct)
     {
         var entity = FromCriar(req);
         var criado = await repo.AddAsync(entity, ct);
@@ -43,7 +43,7 @@ public class ClienteController(
 
     // ─── PUT /api/clientes/{id} ───────────────────────────────────────────────
     [HttpPut("{id:guid}")]
-    public async Task<IActionResult> Atualizar(Guid id, [FromBody] AtualizarClienteRequest req, CancellationToken ct)
+    public async Task<IActionResult> Atualizar(Guid id, [FromBody] UpdateClienteRequest req, CancellationToken ct)
     {
         var existente = await repo.GetByIdAsync(id, ct);
         if (existente is null) return NotFound();
@@ -245,55 +245,83 @@ public class ClienteController(
         return string.IsNullOrWhiteSpace(s) ? null : s;
     }
 
-    private static Cliente FromCriar(CriarClienteRequest r) => new()
+    private static Cliente FromCriar(CreateClienteRequest r) => new()
     {
-        TipoCliente    = r.TipoCliente,
-        NomeCompleto   = r.NomeCompleto,
-        Cpf            = r.Cpf,
-        Rg             = r.Rg,
-        OrgaoExpedidor = r.OrgaoExpedidor,
-        DataNascimento = r.DataNascimento,
-        EstadoCivil    = r.EstadoCivil,
-        Profissao      = r.Profissao,
-        Telefone       = r.Telefone,
-        NumeroConta    = r.NumeroConta,
-        Pix            = r.Pix,
-        Cep            = r.Cep,
-        Endereco       = r.Endereco,
-        Numero         = r.Numero,
-        Bairro         = r.Bairro,
-        Complemento    = r.Complemento,
-        Cidade         = r.Cidade,
-        Estado         = r.Estado,
+        TipoCliente       = r.TipoCliente,
+        NomeCompleto      = r.NomeCompleto,
+        CPF               = r.CPF,
+        RG                = r.RG,
+        OrgaoExpedidor    = r.OrgaoExpedidor,
+        RazaoSocial       = r.RazaoSocial,
+        CNPJ              = r.CNPJ,
+        InscricaoEstadual = r.InscricaoEstadual,
+        Telefone          = r.Telefone,
+        CEP               = r.CEP,
+        Estado            = r.Estado,
+        Cidade            = r.Cidade,
+        Endereco          = r.Endereco,
+        Numero            = r.Numero,
+        Bairro            = r.Bairro,
+        Complemento       = r.Complemento,
+        DataReferencia    = r.DataReferencia,
+        EstadoCivil       = r.EstadoCivil,
+        AreaAtuacao       = r.AreaAtuacao,
+        NumeroConta       = r.NumeroConta,
+        Pix               = r.Pix,
+        Observacoes       = r.Observacoes,
     };
 
-    private static void AplicarAtualizacao(Cliente c, AtualizarClienteRequest r)
+    private static void AplicarAtualizacao(Cliente c, UpdateClienteRequest r)
     {
-        c.TipoCliente    = r.TipoCliente;
-        c.NomeCompleto   = r.NomeCompleto;
-        c.Cpf            = r.Cpf;
-        c.Rg             = r.Rg;
-        c.OrgaoExpedidor = r.OrgaoExpedidor;
-        c.DataNascimento = r.DataNascimento;
-        c.EstadoCivil    = r.EstadoCivil;
-        c.Profissao      = r.Profissao;
-        c.Telefone       = r.Telefone;
-        c.NumeroConta    = r.NumeroConta;
-        c.Pix            = r.Pix;
-        c.Cep            = r.Cep;
-        c.Endereco       = r.Endereco;
-        c.Numero         = r.Numero;
-        c.Bairro         = r.Bairro;
-        c.Complemento    = r.Complemento;
-        c.Cidade         = r.Cidade;
-        c.Estado         = r.Estado;
+        if (r.TipoCliente       != null) c.TipoCliente       = r.TipoCliente;
+        if (r.NomeCompleto      != null) c.NomeCompleto      = r.NomeCompleto;
+        if (r.CPF               != null) c.CPF               = r.CPF;
+        if (r.RG                != null) c.RG                = r.RG;
+        if (r.OrgaoExpedidor    != null) c.OrgaoExpedidor    = r.OrgaoExpedidor;
+        if (r.RazaoSocial       != null) c.RazaoSocial       = r.RazaoSocial;
+        if (r.CNPJ              != null) c.CNPJ              = r.CNPJ;
+        if (r.InscricaoEstadual != null) c.InscricaoEstadual = r.InscricaoEstadual;
+        if (r.Telefone          != null) c.Telefone          = r.Telefone;
+        if (r.CEP               != null) c.CEP               = r.CEP;
+        if (r.Estado            != null) c.Estado            = r.Estado;
+        if (r.Cidade            != null) c.Cidade            = r.Cidade;
+        if (r.Endereco          != null) c.Endereco          = r.Endereco;
+        if (r.Numero            != null) c.Numero            = r.Numero;
+        if (r.Bairro            != null) c.Bairro            = r.Bairro;
+        if (r.Complemento       != null) c.Complemento       = r.Complemento;
+        if (r.DataReferencia.HasValue)   c.DataReferencia    = r.DataReferencia;
+        if (r.EstadoCivil       != null) c.EstadoCivil       = r.EstadoCivil;
+        if (r.AreaAtuacao       != null) c.AreaAtuacao       = r.AreaAtuacao;
+        if (r.NumeroConta       != null) c.NumeroConta       = r.NumeroConta;
+        if (r.Pix               != null) c.Pix               = r.Pix;
+        if (r.IsActive.HasValue) c.IsActive = r.IsActive.Value;
+        if (r.Observacoes       != null) c.Observacoes       = r.Observacoes;
     }
 
     private static ClienteResponse ToResponse(Cliente c) => new(
-        c.Id, c.IdAdvogado,
-        c.TipoCliente, c.NomeCompleto, c.Cpf, c.Rg, c.OrgaoExpedidor,
-        c.DataNascimento, c.EstadoCivil, c.Profissao,
-        c.Telefone, c.NumeroConta, c.Pix,
-        c.Cep, c.Endereco, c.Numero, c.Bairro, c.Complemento,
-        c.Cidade, c.Estado, c.DataCadastro);
+        Id:               c.Id,
+        TipoCliente:      c.TipoCliente,
+        NomeCompleto:     c.NomeCompleto,
+        CPF:              c.CPF,
+        RG:               c.RG,
+        OrgaoExpedidor:   c.OrgaoExpedidor,
+        RazaoSocial:      c.RazaoSocial,
+        CNPJ:             c.CNPJ,
+        InscricaoEstadual: c.InscricaoEstadual,
+        Telefone:         c.Telefone,
+        CEP:              c.CEP,
+        Estado:           c.Estado,
+        Cidade:           c.Cidade,
+        Endereco:         c.Endereco,
+        Numero:           c.Numero,
+        Bairro:           c.Bairro,
+        Complemento:      c.Complemento,
+        DataReferencia:   c.DataReferencia,
+        EstadoCivil:      c.EstadoCivil,
+        AreaAtuacao:      c.AreaAtuacao,
+        NumeroConta:      c.NumeroConta,
+        Pix:              c.Pix,
+        IsActive:         c.IsActive,
+        Observacoes:      c.Observacoes,
+        DataCadastro:     c.DataCadastro);
 }

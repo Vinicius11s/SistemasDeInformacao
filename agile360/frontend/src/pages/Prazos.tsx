@@ -305,13 +305,10 @@ export function Prazos() {
   return (
     <div className="mx-auto max-w-7xl space-y-5">
 
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-    <div>
-          <h1
-            className="text-xl font-bold tracking-tight"
-            style={{ color: 'var(--color-text-heading)' }}
-          >
+      {/* Header — empilha no mobile, botão 44px */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl" style={{ color: 'var(--color-text-heading)' }}>
             Prazos
           </h1>
           <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
@@ -319,17 +316,17 @@ export function Prazos() {
             {lista.filter(p => diasParaVencimento(p.data_vencimento) <= 3 && p.status === 'Pendente').length} vencem em até 3 dias
           </p>
         </div>
-        <Button variant="primary" onClick={abrirCriar}>+ Novo prazo</Button>
+        <Button variant="primary" onClick={abrirCriar} className="w-full min-h-[44px] sm:w-auto">+ Novo prazo</Button>
       </div>
 
-      {/* Filtros de status */}
+      {/* Filtros de status — toque 44px no mobile */}
       <div className="flex flex-wrap gap-2">
         {(['Todos', 'Pendente', 'Concluído', 'Cancelado'] as const).map(s => (
           <button
             key={s}
             type="button"
             onClick={() => setFiltroStatus(s)}
-            className="rounded-[var(--radius)] border px-3 py-1.5 text-xs font-medium transition-colors"
+            className="min-h-[44px] min-w-[44px] rounded-[var(--radius)] border px-4 py-2 text-xs font-medium transition-colors touch-manipulation"
             style={filtroStatus === s
               ? { background: 'var(--color-primary)', borderColor: 'var(--color-primary)', color: '#fff' }
               : { background: 'transparent', borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }
@@ -353,105 +350,131 @@ export function Prazos() {
           Nenhum prazo encontrado. Cadastre o primeiro prazo clicando em "+ Novo prazo".
         </div>
       ) : (
-        <div
-          className="overflow-x-auto rounded-[var(--radius-lg)] border"
-          style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
-        >
-          <table className="w-full text-sm">
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-                {['Título', 'Cliente', 'Vencimento', 'Dias', 'Prioridade', 'Status', 'Ações'].map(h => (
-                  <th
-                    key={h}
-                    className="label-uppercase px-4 py-3 text-left"
-                    style={{ color: 'var(--color-text-muted)' }}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {listaOrdenada.map((p, i) => {
-                const urg = urgencia(p.data_vencimento);
-                const cliente = clientes.find(c => c.id === p.id_cliente);
-                return (
-                  <tr
-                    key={p.id}
-                    style={{
-                      borderTop:       i > 0 ? '1px solid var(--color-border)' : undefined,
-                      borderLeft:      `3px solid ${urg.borderColor}`,
-                    }}
-                  >
-                    {/* Título */}
-                    <td className="px-4 py-3">
-                      <div className="font-medium" style={{ color: 'var(--color-text-heading)' }}>
-                        {p.titulo}
-                      </div>
-                      {p.tipo_prazo && (
-                        <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                          {p.tipo_prazo}
+        <>
+          {/* Mobile: cards roláveis */}
+          <div className="flex flex-col gap-3 md:hidden">
+            {listaOrdenada.map(p => {
+              const urg = urgencia(p.data_vencimento);
+              const cliente = clientes.find(c => c.id === p.id_cliente);
+              return (
+                <article
+                  key={p.id}
+                  className="rounded-xl border bg-[var(--color-surface)] p-4 shadow-sm"
+                  style={{ borderColor: urg.borderColor, borderLeftWidth: 4 }}
+                >
+                  <p className="font-semibold text-[var(--color-text-heading)]">{p.titulo}</p>
+                  {p.tipo_prazo && (
+                    <p className="text-xs text-[var(--color-text-muted)]">{p.tipo_prazo}</p>
+                  )}
+                  <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+                    {cliente?.nome_completo ?? (p.id_cliente ? p.id_cliente.slice(0, 8) + '…' : '—')}
+                  </p>
+                  <p className="mt-0.5 text-sm font-medium text-[var(--color-text)]">
+                    Vencimento: {formatarData(p.data_vencimento)}
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="flex items-center gap-1 text-xs" style={{ color: urg.labelColor }}>
+                      {urg.icon}
+                      {urg.label}
+                    </span>
+                    <PrioridadeBadge p={p.prioridade} />
+                    <StatusBadge s={p.status} />
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => abrirEditar(p)}
+                      className="min-h-[44px] min-w-[44px] flex-1 rounded-[var(--radius)] border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-primary)] touch-manipulation"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => excluir(p)}
+                      className="min-h-[44px] min-w-[44px] flex-1 rounded-[var(--radius)] border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-error)] touch-manipulation"
+                    >
+                      Excluir
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+
+          {/* Desktop: tabela */}
+          <div
+            className="hidden overflow-x-auto rounded-[var(--radius-lg)] border md:block"
+            style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
+          >
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                  {['Título', 'Cliente', 'Vencimento', 'Dias', 'Prioridade', 'Status', 'Ações'].map(h => (
+                    <th
+                      key={h}
+                      className="label-uppercase px-4 py-3 text-left"
+                      style={{ color: 'var(--color-text-muted)' }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {listaOrdenada.map((p, i) => {
+                  const urg = urgencia(p.data_vencimento);
+                  const cliente = clientes.find(c => c.id === p.id_cliente);
+                  return (
+                    <tr
+                      key={p.id}
+                      style={{
+                        borderTop:       i > 0 ? '1px solid var(--color-border)' : undefined,
+                        borderLeft:      `3px solid ${urg.borderColor}`,
+                      }}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="font-medium" style={{ color: 'var(--color-text-heading)' }}>
+                          {p.titulo}
                         </div>
-                      )}
-                    </td>
-
-                    {/* Cliente */}
-                    <td className="px-4 py-3" style={{ color: 'var(--color-text-secondary)' }}>
-                      {cliente?.nome_completo ?? p.id_cliente.slice(0, 8) + '…'}
-                    </td>
-
-                    {/* Vencimento */}
-                    <td className="px-4 py-3">
-                      <div className="font-medium" style={{ color: 'var(--color-text)' }}>
-                        {formatarData(p.data_vencimento)}
-                      </div>
-                    </td>
-
-                    {/* Dias restantes */}
-                    <td className="px-4 py-3">
-                      <span className="flex items-center gap-1 text-xs" style={{ color: urg.labelColor }}>
-                        {urg.icon}
-                        {urg.label}
-                      </span>
-                    </td>
-
-                    {/* Prioridade */}
-                    <td className="px-4 py-3">
-                      <PrioridadeBadge p={p.prioridade} />
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-4 py-3">
-                      <StatusBadge s={p.status} />
-                    </td>
-
-                    {/* Ações */}
-                    <td className="px-4 py-3">
-                      <div className="flex gap-3 text-xs">
-                        <button
-                          type="button"
-                          onClick={() => abrirEditar(p)}
-                          style={{ color: 'var(--color-primary)' }}
-                          className="hover:underline"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => excluir(p)}
-                          style={{ color: 'var(--color-error)' }}
-                          className="hover:underline"
-                        >
-                          Excluir
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                        {p.tipo_prazo && (
+                          <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                            {p.tipo_prazo}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3" style={{ color: 'var(--color-text-secondary)' }}>
+                        {cliente?.nome_completo ?? (p.id_cliente ? p.id_cliente.slice(0, 8) + '…' : '—')}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium" style={{ color: 'var(--color-text)' }}>
+                          {formatarData(p.data_vencimento)}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="flex items-center gap-1 text-xs" style={{ color: urg.labelColor }}>
+                          {urg.icon}
+                          {urg.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <PrioridadeBadge p={p.prioridade} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge s={p.status} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-3 text-xs">
+                          <button type="button" onClick={() => abrirEditar(p)} style={{ color: 'var(--color-primary)' }} className="hover:underline">Editar</button>
+                          <button type="button" onClick={() => excluir(p)} style={{ color: 'var(--color-error)' }} className="hover:underline">Excluir</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {/* ── Modal de cadastro/edição ─────────────────────────────────────── */}
