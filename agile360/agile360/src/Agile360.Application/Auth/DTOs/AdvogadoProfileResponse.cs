@@ -9,13 +9,12 @@ public record AdvogadoProfileResponse(
     string  Nome,
     string  Email,
     string? Role,
-    string? NumeroOab,
-    string? OabUf,
+    string? OAB,
     string? NomeEscritorio,
     string? Plano,
     string? StatusAssinatura,
-    string? LogoUrl,
-    string? TelefoneContato,
+    string? FotoUrl,
+    string? Telefone,
     string? Cidade,
     string? Estado,
-    DateTimeOffset? DataExpiracao);
+    DateOnly? DataExpiracao);      // date no Postgres → DateOnly no C# (sem timezone)

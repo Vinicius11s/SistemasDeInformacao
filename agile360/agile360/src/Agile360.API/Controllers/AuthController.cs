@@ -4,6 +4,7 @@ using Agile360.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.Http;
 
 namespace Agile360.API.Controllers;
 
@@ -12,10 +13,12 @@ namespace Agile360.API.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly ILogger<AuthController> _logger;
 
-    public AuthController(IAuthService authService)
+    public AuthController(IAuthService authService, ILogger<AuthController> logger)
     {
         _authService = authService;
+        _logger      = logger;
     }
 
     [HttpPost("register")]
@@ -34,13 +37,32 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     [AllowAnonymous]
     [EnableRateLimiting("auth-login")]
-    [ProducesResponseType(typeof(ApiResponse<AuthResponse>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<AuthResponse>),        StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<MfaRequiredResponse>), StatusCodes.Status202Accepted)]
+    [ProducesResponseType(typeof(ApiResponse<object>),              StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken ct)
     {
+        _logger.LogInformation("[Login] Requisição recebida — IP: {IP}, Email: {Email}",
+            HttpContext.Connection.RemoteIpAddress, request.Email);
+
         var result = await _authService.LoginAsync(request, ct);
+
         if (!result.Success)
+        {
+            _logger.LogWarning("[Login] Falhou para {Email}: {Error}", request.Email, result.Error);
             return BadRequest(ApiResponse<object>.Fail(result.Error ?? "E-mail ou senha inválidos.", statusCode: 400));
+        }
+
+        // ── MFA ativo: retorna 202 Accepted com temp token ───────────────────────
+        // O frontend deve redirecionar para a tela de desafio MFA ao receber 202.
+        if (result.MfaRequired)
+        {
+            _logger.LogInformation("[Login] MFA challenge emitido para {Email}", request.Email);
+            return StatusCode(StatusCodes.Status202Accepted,
+                ApiResponse<MfaRequiredResponse>.Ok(result.Mfa!));
+        }
+
+        _logger.LogInformation("[Login] Concluído com sucesso para {Email}", request.Email);
         return Ok(ApiResponse<AuthResponse>.Ok(result.Data!));
     }
 

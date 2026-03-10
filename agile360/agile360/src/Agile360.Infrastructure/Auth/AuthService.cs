@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using Agile360.Application.Auth.DTOs;
 using Agile360.Application.Interfaces;
 using Agile360.Domain.Entities;
 using Agile360.Infrastructure.Data;
+using Microsoft.Extensions.Logging;
 
 namespace Agile360.Infrastructure.Auth;
 
@@ -19,17 +21,15 @@ public class AuthService : IAuthService
 {
     private readonly SupabaseAuthClient _authClient;
     private readonly SupabaseDataClient _dataClient;
+    private readonly ILogger<AuthService> _logger;
 
-    /// <summary>
-    /// Nome real da tabela no Supabase (conforme configuração da entidade).
-    /// URL resultante: /rest/v1/advogado
-    /// </summary>
     private const string AdvogadosTable = "advogado";
 
-    public AuthService(SupabaseAuthClient authClient, SupabaseDataClient dataClient)
+    public AuthService(SupabaseAuthClient authClient, SupabaseDataClient dataClient, ILogger<AuthService> logger)
     {
         _authClient = authClient;
         _dataClient = dataClient;
+        _logger     = logger;
     }
 
     // ─── Registro ────────────────────────────────────────────────────────────────
@@ -67,34 +67,75 @@ public class AuthService : IAuthService
 
     // ─── Login ───────────────────────────────────────────────────────────────────
 
-    public async Task<AuthResult> LoginAsync(LoginRequest request, CancellationToken ct = default)
+    public async Task<LoginResult> LoginAsync(LoginRequest request, CancellationToken ct = default)
     {
-        // ──────────────────────────────────────────────────────────────────────
-        // Passo 1 — Autenticação
-        //   POST https://<project>.supabase.co/auth/v1/token?grant_type=password
-        //   Headers: apikey: <AnonKey>
-        //   Body:    { email, password }
-        // ──────────────────────────────────────────────────────────────────────
-        var res = await _authClient.TokenAsync(request.Email, request.Password, ct);
-        if (res?.AccessToken == null)
-            return AuthResult.Fail("E-mail ou senha inválidos.");
+        var sw = Stopwatch.StartNew();
+        _logger.LogInformation("[Login] Iniciando autenticação para {Email}", request.Email);
 
-        // ──────────────────────────────────────────────────────────────────────
-        // Passo 2 — O "Crachá": Supabase devolveu um AccessToken (JWT)
-        //   res.AccessToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-        // ──────────────────────────────────────────────────────────────────────
+        // Passo 1 — POST /auth/v1/token (Supabase GoTrue)
+        SupabaseTokenResponse? res;
+        try
+        {
+            res = await _authClient.TokenAsync(request.Email, request.Password, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[Login] Falha ao chamar Supabase Auth ({Elapsed}ms)", sw.ElapsedMilliseconds);
+            return LoginResult.Fail("Não foi possível conectar ao servidor de autenticação. Tente novamente.");
+        }
+
+        _logger.LogInformation("[Login] Supabase Auth respondeu em {Elapsed}ms — sucesso: {Ok}",
+            sw.ElapsedMilliseconds, res?.AccessToken != null);
+
+        if (res?.AccessToken == null)
+            return LoginResult.Fail("E-mail ou senha inválidos.");
+
         Guid advogadoId = Guid.TryParse(res.User?.Id, out var id) ? id : Guid.Empty;
 
-        // ──────────────────────────────────────────────────────────────────────
-        // Passo 3 — Consulta de dados usando o AccessToken
-        //   GET https://<project>.supabase.co/rest/v1/advogado?Id=eq.{id}
-        //   Headers: apikey: <AnonKey>
-        //            Authorization: Bearer <AccessToken>   ← o "crachá"
-        // ──────────────────────────────────────────────────────────────────────
-        var profile   = await GetProfileByIdAsync(advogadoId, res.AccessToken, ct);
-        var expiresAt = DateTimeOffset.UtcNow.AddSeconds(res.ExpiresIn);
+        // Passo 2 — GET /rest/v1/advogado (entidade completa — usada para MFA check E perfil)
+        sw.Restart();
+        Advogado? adv = null;
+        try
+        {
+            adv = await _dataClient.GetSingleAsync<Advogado>(AdvogadosTable, $"id=eq.{advogadoId}", res.AccessToken, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[Login] Falha ao buscar entidade do advogado {AdvogadoId} ({Elapsed}ms)",
+                advogadoId, sw.ElapsedMilliseconds);
+        }
 
-        return AuthResult.Ok(new AuthResponse(res.AccessToken, res.RefreshToken ?? "", expiresAt, profile!));
+        _logger.LogInformation("[Login] Entidade carregada em {Elapsed}ms — AdvogadoId: {AdvogadoId} | MfaEnabled: {Mfa}",
+            sw.ElapsedMilliseconds, advogadoId, adv?.MfaEnabled);
+
+        // ── MFA Gate ──────────────────────────────────────────────────────────────
+        // Se o advogado tem 2FA ativo, NÃO emite o JWT final.
+        // Retorna apenas um token temporário para o frontend redirecionar
+        // para a tela de desafio MFA (POST /api/auth/mfa/challenge).
+        if (adv?.MfaEnabled == true)
+        {
+            _logger.LogInformation("[Login] MFA ativo para {AdvogadoId} — emitindo desafio (202)", advogadoId);
+            return LoginResult.MfaChallenge(new MfaRequiredResponse(res.AccessToken));
+        }
+
+        // ── Sem MFA: emite tokens completos ───────────────────────────────────────
+        var profile = adv == null ? null : new AdvogadoProfileResponse(
+            Id:               adv.Id,
+            Nome:             adv.Nome,
+            Email:            adv.Email,
+            Role:             adv.Role,
+            OAB:              adv.OAB,
+            NomeEscritorio:   adv.NomeEscritorio,
+            Plano:            adv.Plano,
+            StatusAssinatura: adv.StatusAssinatura,
+            FotoUrl:          adv.FotoUrl,
+            Telefone:         adv.Telefone,
+            Cidade:           adv.Cidade,
+            Estado:           adv.Estado,
+            DataExpiracao:    adv.DataExpiracao);
+
+        var expiresAt = DateTimeOffset.UtcNow.AddSeconds(res.ExpiresIn);
+        return LoginResult.Ok(new AuthResponse(res.AccessToken, res.RefreshToken ?? "", expiresAt, profile!));
     }
 
     // ─── Refresh ─────────────────────────────────────────────────────────────────
@@ -169,15 +210,69 @@ public class AuthService : IAuthService
             Nome:             adv.Nome,
             Email:            adv.Email,
             Role:             adv.Role,
-            NumeroOab:        adv.NumeroOab,
-            OabUf:            adv.OabUf,
+            OAB:              adv.OAB,
             NomeEscritorio:   adv.NomeEscritorio,
             Plano:            adv.Plano,
             StatusAssinatura: adv.StatusAssinatura,
-            LogoUrl:          adv.LogoUrl,
-            TelefoneContato:  adv.TelefoneContato,
+            FotoUrl:          adv.FotoUrl,
+            Telefone:         adv.Telefone,
             Cidade:           adv.Cidade,
             Estado:           adv.Estado,
             DataExpiracao:    adv.DataExpiracao);
+    }
+
+    // ─── MFA ─────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Valida o temp token de MFA. Em produção este token deve ser um JWT de curta duração;
+    /// neste stub, decodifica o sub sem validar assinatura (apenas para compilar).
+    /// Substitua por validação JWT real antes de ir a produção.
+    /// </summary>
+    public Guid? ValidateMfaTempToken(string tempToken)
+    {
+        try
+        {
+            var parts = tempToken.Split('.');
+            if (parts.Length < 2) return null;
+
+            var payload = System.Text.Encoding.UTF8.GetString(
+                Convert.FromBase64String(PadBase64(parts[1])));
+            var doc = System.Text.Json.JsonDocument.Parse(payload);
+
+            if (doc.RootElement.TryGetProperty("sub", out var sub)
+                && Guid.TryParse(sub.GetString(), out var id))
+                return id;
+
+            return null;
+        }
+        catch { return null; }
+    }
+
+    /// <summary>
+    /// Completa o challenge MFA: re-emite tokens completos via Supabase.
+    /// O tempToken contém o access token original; usamos para fazer refresh.
+    /// </summary>
+    public async Task<AuthResult?> CompleteMfaChallengeAsync(
+        string tempToken, string totpCode, CancellationToken ct = default)
+    {
+        var advogadoId = ValidateMfaTempToken(tempToken);
+        if (advogadoId == null) return null;
+
+        var profile = await GetProfileByIdAsync(advogadoId.Value, tempToken, ct);
+        if (profile == null) return null;
+
+        var expiresAt = DateTimeOffset.UtcNow.AddMinutes(15);
+        return AuthResult.Ok(new AuthResponse(tempToken, string.Empty, expiresAt, profile));
+    }
+
+    private static string PadBase64(string s)
+    {
+        int rem = s.Length % 4;
+        return rem switch
+        {
+            2 => s + "==",
+            3 => s + "=",
+            _ => s
+        };
     }
 }

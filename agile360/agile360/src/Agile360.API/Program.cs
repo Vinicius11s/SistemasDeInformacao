@@ -1,5 +1,6 @@
 using System.Text;
 using Microsoft.IdentityModel.JsonWebTokens;
+using Agile360.API.Auth;
 using Agile360.API.Middleware;
 using Agile360.API.MultiTenancy;
 using Agile360.Application;
@@ -40,6 +41,12 @@ var validateKey    = !string.IsNullOrEmpty(jwtSecret)  && !jwtSecret.Contains('<
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        // ─── .NET 8: JsonWebTokenHandler não remapeia "sub" → NameIdentifier ────
+        // MapInboundClaims = false garante comportamento explícito e consistente:
+        // todos os claims JWT chegam com seus nomes originais (sub, email, etc.).
+        // CurrentUserService.AdvogadoId tenta "advogado_id", NameIdentifier E "sub".
+        options.MapInboundClaims = false;
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer           = validateIssuer,
@@ -52,18 +59,21 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                                            : null,
             RequireSignedTokens      = validateKey,
             ValidateLifetime         = true,
-            ClockSkew                = TimeSpan.Zero,
+
+            // ─── Clock Skew — tolerância de 30s para diferenças de relógio ────
+            // TimeSpan.Zero é severo demais: um servidor 1s atrasado já invalida
+            // tokens recém-emitidos. 30s é o padrão de mercado para JWT.
+            ClockSkew = TimeSpan.FromSeconds(30),
 
             // ─── Bypass de assinatura quando Secret não está configurado ─────
-            // .NET 8+ usa JsonWebTokenHandler; o SignatureValidator deve retornar
-            // JsonWebToken (não JwtSecurityToken) para ser aceito pelo handler.
+            // Deve retornar JsonWebToken (não JwtSecurityToken) para o novo handler.
             // PRODUÇÃO: configure JwtSettings:Secret (Supabase → Settings → API → JWT Secret).
             SignatureValidator = validateKey
                 ? null
                 : (token, _) => new JsonWebTokenHandler().ReadJsonWebToken(token),
         };
 
-        // ─── Logging de falhas de autenticação (diagnóstico) ─────────────────
+        // ─── Logging de autenticação (diagnóstico) ────────────────────────────
         options.Events = new JwtBearerEvents
         {
             OnAuthenticationFailed = ctx =>
@@ -73,13 +83,39 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             },
             OnTokenValidated = ctx =>
             {
-                var sub = ctx.Principal?.FindFirst("sub")?.Value ?? "(sem sub)";
-                Log.Debug("[JWT] Token válido — sub: {Sub}", sub);
+                // Com MapInboundClaims = false, "sub" permanece como "sub".
+                // Fallback para NameIdentifier preserva compatibilidade retroativa.
+                var advogadoId = ctx.Principal?.FindFirst("sub")?.Value
+                              ?? ctx.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                              ?? "(sem sub)";
+                Log.Debug("[JWT] Token válido — advogadoId: {AdvogadoId}", advogadoId);
                 return Task.CompletedTask;
             }
         };
-    });
-builder.Services.AddAuthorization();
+    })
+    .AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(
+        ApiKeyAuthenticationDefaults.AuthenticationScheme, _ => { });
+
+builder.Services.AddAuthorization(options =>
+{
+    // Política padrão: apenas JWT.
+    // Separamos ApiKey para evitar que o ApiKeyHandler tente autenticar TODOS os
+    // requests JWT e emita "was not authenticated" em cada um (poluição de logs).
+    options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder(
+            JwtBearerDefaults.AuthenticationScheme)
+        .RequireAuthenticatedUser()
+        .Build();
+
+    // Política explícita para endpoints que aceitam JWT *ou* API Key
+    // (ex.: webhooks, integrações server-to-server).
+    // Uso: [Authorize(Policy = "JwtOrApiKey")]
+    options.AddPolicy("JwtOrApiKey",
+        new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder(
+                JwtBearerDefaults.AuthenticationScheme,
+                ApiKeyAuthenticationDefaults.AuthenticationScheme)
+            .RequireAuthenticatedUser()
+            .Build());
+});
 
 // ─── Rate limiting ────────────────────────────────────────────────────────────
 builder.Services.AddRateLimiter(options =>
@@ -87,6 +123,9 @@ builder.Services.AddRateLimiter(options =>
     options.AddFixedWindowLimiter("auth-login",    c => { c.Window = TimeSpan.FromMinutes(1); c.PermitLimit = 5; });
     options.AddFixedWindowLimiter("auth-register", c => { c.Window = TimeSpan.FromHours(1);   c.PermitLimit = 3; });
     options.AddFixedWindowLimiter("auth-forgot",   c => { c.Window = TimeSpan.FromHours(1);   c.PermitLimit = 3; });
+    // Recovery Codes — geração envolve 10 × BCrypt(cost 12) ≈ 2.5s de CPU.
+    // 3 req/hora por usuário autenticado previne DoS de CPU via endpoint /generate.
+    options.AddFixedWindowLimiter("mfa-generate",  c => { c.Window = TimeSpan.FromHours(1);   c.PermitLimit = 3; });
 });
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
@@ -143,6 +182,11 @@ app.Use(async (context, next) =>
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<WebhookAuthMiddleware>();
+
+// CORS deve vir antes de UseAuthentication para que os headers de CORS
+// estejam presentes mesmo em respostas de erro (401, 403, 429).
+app.UseCors();
+
 app.UseAuthentication();
 app.UseMiddleware<TenantMiddleware>();
 app.UseAuthorization();
@@ -155,7 +199,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(o => o.SwaggerEndpoint("/swagger/v1/swagger.json", "Agile360 API v1"));
 }
 
-app.UseCors();
 app.MapControllers();
 app.MapHealthChecks("/health");
 

@@ -20,8 +20,15 @@ public class CurrentUserService : ICurrentUserService
     {
         get
         {
+            // Ordem de prioridade:
+            // 1. Claim customizada "advogado_id" (tokens emitidos pelo próprio backend)
+            // 2. ClaimTypes.NameIdentifier — onde antigos JwtSecurityTokenHandler mapeavam "sub"
+            //    (.NET < 8 ou quando MapInboundClaims = true)
+            // 3. Claim "sub" direta — .NET 8 JsonWebTokenHandler com MapInboundClaims = false
+            //    (padrão atual): "sub" permanece como "sub" sem remapeamento.
             var value = _httpContextAccessor.HttpContext?.User?.FindFirst(AdvogadoIdClaim)?.Value
-                ?? _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                ?? _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? _httpContextAccessor.HttpContext?.User?.FindFirst("sub")?.Value;
             return Guid.TryParse(value, out var id) ? id : Guid.Empty;
         }
     }
