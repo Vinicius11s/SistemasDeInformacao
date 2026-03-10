@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { ShieldCheck, KeyRound } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 /** Dois modos de autenticação: TOTP padrão ou código de recuperação de emergência */
@@ -78,8 +79,11 @@ export function MfaChallenge() {
 
         {/* Ícone */}
         <div className="mb-5 flex justify-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-primary)]/10 text-3xl">
-            {isTotp ? '🔐' : '🔑'}
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
+            {isTotp
+              ? <ShieldCheck size={28} strokeWidth={1.75} />
+              : <KeyRound    size={28} strokeWidth={1.75} />
+            }
           </div>
         </div>
 
@@ -92,24 +96,26 @@ export function MfaChallenge() {
           <button
             type="button"
             onClick={() => switchMode('totp')}
-            className={`flex-1 rounded-md py-1.5 text-sm font-medium transition-colors ${
+            className={`flex-1 flex items-center justify-center gap-1.5 rounded-md py-1.5 text-sm font-medium transition-colors ${
               isTotp
                 ? 'bg-[var(--color-primary)] text-white shadow-sm'
                 : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
             }`}
           >
-            🔐 Autenticador
+            <ShieldCheck size={14} className="shrink-0" />
+            Autenticador
           </button>
           <button
             type="button"
             onClick={() => switchMode('recovery')}
-            className={`flex-1 rounded-md py-1.5 text-sm font-medium transition-colors ${
+            className={`flex-1 flex items-center justify-center gap-1.5 rounded-md py-1.5 text-sm font-medium transition-colors ${
               !isTotp
                 ? 'bg-[var(--color-primary)] text-white shadow-sm'
                 : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
             }`}
           >
-            🔑 Código de emergência
+            <KeyRound size={14} className="shrink-0" />
+            Código de emergência
           </button>
         </div>
 

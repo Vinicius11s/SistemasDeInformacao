@@ -1,5 +1,15 @@
 import { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import {
+  KeyRound,
+  Lock,
+  AlertTriangle,
+  Download,
+  Copy,
+  Check,
+  Type,
+  ShieldCheck,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import {
   getMfaStatus,
@@ -76,19 +86,22 @@ function RecoveryCodesBadge({ token, onRegen }: { token: string; onRegen: () => 
     }`}>
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <p className={`text-sm font-medium ${isCritical ? 'text-red-800' : isLow ? 'text-amber-800' : 'text-[var(--color-text)]'}`}>
-            🔑 Códigos de recuperação de emergência
+          <p className={`flex items-center gap-1.5 text-sm font-medium ${isCritical ? 'text-red-800' : isLow ? 'text-amber-800' : 'text-[var(--color-text)]'}`}>
+            <KeyRound size={14} className="shrink-0" />
+            Códigos de recuperação de emergência
           </p>
 
           {/* F6a — alerta ≤ 2 */}
           {isCritical ? (
-            <p className="mt-0.5 text-sm text-red-700">
-              ⚠️ <strong>Atenção: restam apenas {remaining} código{remaining !== 1 ? 's' : ''}!</strong>{' '}
-              Gere novos agora para não perder o acesso à conta.
+            <p className="mt-0.5 flex items-start gap-1 text-sm text-red-700">
+              <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+              <span><strong>Atenção: restam apenas {remaining} código{remaining !== 1 ? 's' : ''}!</strong>{' '}
+              Gere novos agora para não perder o acesso à conta.</span>
             </p>
           ) : isLow ? (
-            <p className="mt-0.5 text-sm text-amber-700">
-              ⚠️ Restam apenas <strong>{remaining}</strong> de 10 códigos. Considere gerar novos em breve.
+            <p className="mt-0.5 flex items-center gap-1 text-sm text-amber-700">
+              <AlertTriangle size={14} className="shrink-0" />
+              Restam apenas <strong>{remaining}</strong> de 10 códigos. Considere gerar novos em breve.
             </p>
           ) : (
             <p className="mt-0.5 text-sm text-[var(--color-text-muted)]">
@@ -152,7 +165,8 @@ export function SecuritySettings() {
   useEffect(() => {
     if (!token) return;
     getMfaStatus(token).then((res) => {
-      if (res.success && res.data) setMfaEnabled(res.data.mfaEnabled);
+      // res.data usa snake_case (mfa_enabled) conforme serialização do backend
+      if (res.success && res.data) setMfaEnabled(res.data.mfa_enabled);
     });
   }, [token]);
 
@@ -167,8 +181,9 @@ export function SecuritySettings() {
       setError(res.error?.message ?? 'Erro ao iniciar configuração.');
       return;
     }
-    setQrUrl(res.data!.qrCodeUrl);
-    setManualKey(res.data!.manualEntryKey);
+    // Campos snake_case: qr_code_url, manual_entry_key
+    setQrUrl(res.data!.qr_code_url);
+    setManualKey(res.data!.manual_entry_key);
     setView('setup-qr');
   }
 
@@ -187,8 +202,8 @@ export function SecuritySettings() {
       setCode('');
       return;
     }
-    // F3/F4: armazena os códigos e avança para o Passo 3
-    setBackupCodes(res.data!.recoveryCodes);
+    // F3/F4: armazena os códigos (snake_case: recovery_codes) e avança para o Passo 3
+    setBackupCodes(res.data!.recovery_codes);
     setBackupConfirmed(false);
     setMfaEnabled(true);
     setCode('');
@@ -198,7 +213,7 @@ export function SecuritySettings() {
 
   // F4 — Conclusão do Passo 3: volta ao status
   function handleBackupDone() {
-    setSuccess('🔒 2FA ativado com sucesso! Guarde seus códigos de recuperação em local seguro.');
+    setSuccess('2FA ativado com sucesso! Guarde seus códigos de recuperação em local seguro.');
     setCodesVersion((v) => v + 1);
     resetSetupFlow();
     setView('status');
@@ -301,7 +316,8 @@ export function SecuritySettings() {
       </p>
 
       {success && (
-        <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+          <ShieldCheck size={15} className="shrink-0 text-green-600" />
           {success}
         </div>
       )}
@@ -369,14 +385,16 @@ export function SecuritySettings() {
             <div className="rounded-xl border-2 border-[var(--color-border)] bg-white p-4 shadow-sm">
               <QRCodeSVG value={qrUrl} size={192} level="M" includeMargin={false} />
             </div>
-            <p className="text-xs text-[var(--color-text-muted)]">
-              🔒 QR Code gerado localmente — sua chave nunca sai do dispositivo
+            <p className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
+              <Lock size={12} className="shrink-0" />
+              QR Code gerado localmente — sua chave nunca sai do dispositivo
             </p>
           </div>
 
           <details className="mb-5 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)]">
-            <summary className="cursor-pointer select-none px-4 py-3 text-sm font-medium text-[var(--color-text-muted)]">
-              📵 Não consigo escanear — inserir chave manualmente
+            <summary className="flex cursor-pointer select-none items-center gap-2 px-4 py-3 text-sm font-medium text-[var(--color-text-muted)]">
+              <Type size={14} className="shrink-0" />
+              Não consigo escanear — inserir chave manualmente
             </summary>
             <div className="border-t border-[var(--color-border)] px-4 py-3">
               <p className="mb-2 text-xs text-[var(--color-text-muted)]">
@@ -391,8 +409,9 @@ export function SecuritySettings() {
                   {copied ? '✓ Copiado' : 'Copiar'}
                 </button>
               </div>
-              <p className="mt-2 text-xs text-amber-600">
-                ⚠️ Guarde essa chave em local seguro — ela não será exibida novamente.
+              <p className="mt-2 flex items-center gap-1 text-xs text-amber-600">
+                <AlertTriangle size={12} className="shrink-0" />
+                Guarde essa chave em local seguro — ela não será exibida novamente.
               </p>
             </div>
           </details>
@@ -462,7 +481,7 @@ export function SecuritySettings() {
           <SetupStepper step={3} />
 
           <div className="mb-4 flex items-center gap-2">
-            <span className="text-2xl">🔑</span>
+            <KeyRound size={28} className="shrink-0 text-[var(--color-primary)]" />
             <div>
               <h2 className="font-semibold text-[var(--color-text)]">
                 Passo 3 — Seus Códigos de Recuperação de Emergência
@@ -493,20 +512,25 @@ export function SecuritySettings() {
               onClick={handleDownloadTxt}
               className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-text-muted)] hover:bg-gray-50 transition-colors"
             >
-              ⬇ Baixar como .txt
+              <Download size={14} className="shrink-0" />
+              Baixar como .txt
             </button>
             <button
               type="button"
               onClick={handleCopyAll}
               className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-text-muted)] hover:bg-gray-50 transition-colors"
             >
-              {copiedAll ? '✓ Copiado!' : '📋 Copiar todos'}
+              {copiedAll
+                ? <><Check size={14} className="shrink-0" /> Copiado!</>
+                : <><Copy size={14} className="shrink-0" /> Copiar todos</>
+              }
             </button>
           </div>
 
           {/* Aviso único de exibição */}
-          <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            ⚠️ <strong>Estes códigos NÃO serão exibidos novamente.</strong> Guarde-os agora antes de fechar esta página.
+          <div className="mb-5 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <AlertTriangle size={15} className="mt-0.5 shrink-0 text-amber-700" />
+            <span><strong>Estes códigos NÃO serão exibidos novamente.</strong> Guarde-os agora antes de fechar esta página.</span>
           </div>
 
           {/* Checkbox obrigatório (F4 DoD) */}

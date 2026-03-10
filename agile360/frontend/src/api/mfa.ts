@@ -3,19 +3,23 @@ import { SecureAuthResponse } from './auth';
 
 // ── Tipos de resposta ─────────────────────────────────────────────────────────
 
+// NOTA: As interfaces abaixo usam snake_case para espelhar exatamente o que a API envia.
+// O backend (Program.cs) configura JsonNamingPolicy.SnakeCaseLower — não há camada de
+// transformação no client.ts, então as chaves devem ser idênticas ao JSON recebido.
+
 export interface MfaStatusResponse {
-  mfaEnabled: boolean;
+  mfa_enabled: boolean;
 }
 
 export interface MfaSetupResponse {
-  qrCodeUrl: string;
-  manualEntryKey: string;
-  mfaEnabled: boolean;
+  qr_code_url: string;
+  manual_entry_key: string;
+  mfa_enabled: boolean;
 }
 
 export interface MfaRequiredResponse {
-  mfaTempToken: string;
-  expiresInSeconds: number;
+  mfa_temp_token: string;
+  expires_in_seconds: number;
 }
 
 /**
@@ -24,9 +28,9 @@ export interface MfaRequiredResponse {
  * Os códigos são exibidos APENAS nesta resposta — única oportunidade de visualização.
  */
 export interface MfaActivatedResponse {
-  mfaEnabled: boolean;
+  mfa_enabled: boolean;
   /** 10 códigos no formato XXXX-XXXX — texto limpo, exibição única */
-  recoveryCodes: string[];
+  recovery_codes: string[];
 }
 
 /**
