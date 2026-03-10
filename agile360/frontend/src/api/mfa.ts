@@ -73,7 +73,12 @@ export async function mfaChallenge(
   mfaTempToken: string,
   code: string
 ): Promise<ApiResponse<SecureAuthResponse>> {
-  return api.post<SecureAuthResponse>('/api/auth/mfa/challenge', { mfaTempToken, code });
+  // ATENÇÃO: backend usa JsonNamingPolicy.SnakeCaseLower
+  // → MfaTempToken serializa como "mfa_temp_token", não "mfaTempToken"
+  return api.post<SecureAuthResponse>('/api/auth/mfa/challenge', {
+    mfa_temp_token: mfaTempToken,
+    code,
+  });
 }
 
 /**
@@ -94,10 +99,12 @@ export async function mfaChallengeWithRecovery(
   mfaTempToken: string,
   code: string
 ): Promise<ApiResponse<SecureAuthResponse>> {
-  return api.post<SecureAuthResponse>(
-    '/api/auth/mfa/challenge/recovery',
-    { mfaTempToken, code }
-  );
+  // ATENÇÃO: backend usa JsonNamingPolicy.SnakeCaseLower
+  // → MfaTempToken serializa como "mfa_temp_token", não "mfaTempToken"
+  return api.post<SecureAuthResponse>('/api/auth/mfa/challenge/recovery', {
+    mfa_temp_token: mfaTempToken,
+    code,
+  });
 }
 
 /**

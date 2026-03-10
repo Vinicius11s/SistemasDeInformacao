@@ -57,7 +57,8 @@ export async function register(payload: {
 }
 
 export async function refresh(refreshToken: string): Promise<ApiResponse<AuthResponse>> {
-  return api.post<AuthResponse>('/api/auth/refresh', { refreshToken });
+  // Backend espera "refresh_token" (snake_case via JsonNamingPolicy.SnakeCaseLower)
+  return api.post<AuthResponse>('/api/auth/refresh', { refresh_token: refreshToken });
 }
 
 export async function getMe(token: string): Promise<ApiResponse<Profile>> {
@@ -72,5 +73,6 @@ export async function resetPassword(
   token: string,
   newPassword: string
 ): Promise<ApiResponse<unknown>> {
-  return api.post('/api/auth/reset-password', { token, newPassword });
+  // Backend espera "new_password" (snake_case via JsonNamingPolicy.SnakeCaseLower)
+  return api.post('/api/auth/reset-password', { token, new_password: newPassword });
 }
