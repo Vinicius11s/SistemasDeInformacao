@@ -228,8 +228,12 @@ public class RecoveryCodeServiceTests : IDisposable
         // Act
         await _sut.ValidateAndConsumeAsync(_advogadoId, code);
 
-        // Assert — todos os registros com is_used = true devem ter used_at preenchido
+        // Assert — todos os registros com is_used = true devem ter used_at preenchido.
+        // AsNoTracking() é essencial aqui: ExecuteUpdateAsync atualiza o banco mas NÃO
+        // propaga para o change tracker. Sem AsNoTracking, o EF Core retorna a instância
+        // rastreada antiga (IsUsed=false, UsedAt=null) por identity resolution.
         var usedRecord = await _db.RecoveryCodes
+            .AsNoTracking()
             .FirstOrDefaultAsync(c => c.AdvogadoId == _advogadoId && c.IsUsed);
 
         usedRecord.Should().NotBeNull();

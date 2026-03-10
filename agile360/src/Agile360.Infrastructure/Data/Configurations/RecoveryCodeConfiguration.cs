@@ -35,13 +35,15 @@ public class RecoveryCodeConfiguration : IEntityTypeConfiguration<RecoveryCode>
                .IsRequired();
 
         // ─── Timestamps de auditoria ──────────────────────────────────────────────
+        // Nota: não usamos HasColumnType("timestamp with time zone") aqui porque
+        // o Npgsql mapeia DateTimeOffset → timestamptz automaticamente, e a anotação
+        // explícita quebra o round-trip de DateTimeOffset? no SQLite in-memory
+        // (utilizado pelos testes unitários via ExecuteUpdateAsync).
         builder.Property(e => e.UsedAt)
-               .HasColumnName("used_at")
-               .HasColumnType("timestamp with time zone");
+               .HasColumnName("used_at");
 
         builder.Property(e => e.CreatedAt)
                .HasColumnName("created_at")
-               .HasColumnType("timestamp with time zone")
                .IsRequired();
 
         // ─── FK com cascade delete ────────────────────────────────────────────────

@@ -56,17 +56,6 @@ public class RecoveryCodesRateLimitTests : IClassFixture<RateLimitTestFactory>
 
     // ── Q4 — Rate limit: 3 req OK; 4ª retorna 429 ────────────────────────────
 
-    /// <summary>Diagnóstico: expõe o body do primeiro 500 para facilitar o debug.</summary>
-    [Fact]
-    public async Task Diagnostico_PrimeiraRequisicao_MostraBodyQuando500()
-    {
-        var resp = await _client.PostAsync("/api/auth/mfa/recovery-codes/generate", null);
-        var body = await resp.Content.ReadAsStringAsync();
-        // Se não for 200, mostra o body no erro para diagnóstico
-        resp.StatusCode.Should().Be(HttpStatusCode.OK,
-            $"DIAGNÓSTICO — Body da resposta: {body}");
-    }
-
     [Fact]
     public async Task Generate_PrimeirasTreeRequisicoes_Retornam200()
     {
@@ -94,18 +83,35 @@ public class RecoveryCodesRateLimitTests : IClassFixture<RateLimitTestFactory>
             "a 4ª requisição deve ser bloqueada pelo rate limit (policy: mfa-generate, 3 req/janela)");
     }
 
-    [Fact]
-    public async Task Generate_ComMfaDesativado_Retorna400_NaoConsome_Limit()
+}
+
+/// <summary>
+/// Testes isolados para o endpoint de generate que precisam de rate limiter limpo.
+/// Usa factory separada para não contaminar o estado do IClassFixture principal.
+/// </summary>
+public class RecoveryCodesGenerateIsolatedTests : IClassFixture<RateLimitTestFactory>
+{
+    private readonly HttpClient _client;
+
+    public RecoveryCodesGenerateIsolatedTests(RateLimitTestFactory factory)
     {
-        // Arrange — verifica que o guard 400 (MFA inativo) NÃO consome slot do rate limit
-        // (o middleware de rate limit actua antes da lógica de negócio, mas em ASP.NET Core
-        //  o recurso é reservado no início — este teste documenta o comportamento esperado.)
-        // Neste cenário o stub de IMfaService está configurado MfaEnabled = true pela factory,
-        // portanto um 400 não seria esperado aqui. Apenas garantimos que chegamos a 400
-        // quando a factory configura MfaEnabled = false.
-        // Cenário coberto na suite unitária; aqui é verificado apenas o caminho feliz do RL.
+        _client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+        });
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", "test-token-isolated");
+    }
+
+    [Fact]
+    public async Task Generate_ComMfaAtivado_Retorna200()
+    {
+        // Verifica o caminho feliz: MFA habilitado → generate retorna 200.
+        // Nota: factory configura MfaEnabled = true por padrão.
+        // Cenário de MFA desativado (400) é coberto nos testes unitários de RecoveryCodeService.
         var response = await _client.PostAsync("/api/auth/mfa/recovery-codes/generate", null);
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.OK,
+            "MFA está ativo no stub — generate deve retornar 200");
     }
 }
 
@@ -189,12 +195,11 @@ public class RateLimitTestFactory : WebApplicationFactory<Program>
             services.RemoveAll<ICurrentUserService>();
             services.AddSingleton(userStub);
 
-            // ── 5. Auth de teste: remove JWT e substitui por handler que aceita qualquer Bearer ──
-            // Remove todos os Configure<AuthenticationOptions> (incluindo os do Program.cs que registram "Bearer")
+            // ── 5. Auth de teste: remove JWT/ApiKey e substitui por handler que aceita qualquer Bearer ──
+            // Remove todos os Configure<AuthenticationOptions> (incluindo JWT + ApiKey do Program.cs)
             services.RemoveAll<IConfigureOptions<Microsoft.AspNetCore.Authentication.AuthenticationOptions>>();
             services.RemoveAll<IPostConfigureOptions<Microsoft.AspNetCore.Authentication.AuthenticationOptions>>();
             // Registra o esquema de teste como default E também sob o nome "Bearer"
-            // para que código que busca explicitamente o scheme "Bearer" encontre nosso handler.
             services.AddAuthentication(opts =>
             {
                 opts.DefaultScheme             = "Test";
@@ -204,6 +209,19 @@ public class RateLimitTestFactory : WebApplicationFactory<Program>
             })
             .AddScheme<AuthenticationSchemeOptions, TestBearerAuthHandler>("Test",   _ => { })
             .AddScheme<AuthenticationSchemeOptions, TestBearerAuthHandler>("Bearer", _ => { });
+
+            // ── 5b. Autorização de teste: remove a DefaultPolicy do Program.cs que exige
+            //        os schemes "Bearer" E "ApiKey". Re-registra usando apenas "Test".
+            //        Sem isso, AuthorizationMiddleware tenta autenticar via "ApiKey" e lança
+            //        InvalidOperationException porque o scheme não existe no ambiente de testes.
+            services.RemoveAll<IConfigureOptions<Microsoft.AspNetCore.Authorization.AuthorizationOptions>>();
+            services.RemoveAll<IPostConfigureOptions<Microsoft.AspNetCore.Authorization.AuthorizationOptions>>();
+            services.AddAuthorization(opts =>
+            {
+                opts.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder("Test", "Bearer")
+                    .RequireAuthenticatedUser()
+                    .Build();
+            });
         });
     }
 }
