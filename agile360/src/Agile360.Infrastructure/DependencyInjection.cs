@@ -84,11 +84,14 @@ public static class DependencyInjection
         // ─── Repositórios (EF Core) ──────────────────────────────────────────────────
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
-        services.AddScoped<IClienteRepository,     ClienteRepository>();
-        services.AddScoped<IProcessoRepository,    ProcessoRepository>();
-        services.AddScoped<ICompromissoRepository, CompromissoRepository>();
-        services.AddScoped<IPrazoRepository,       PrazoRepository>();
-        services.AddScoped<IApiKeyRepository,      ApiKeyRepository>();
+        services.AddScoped<IClienteRepository,            ClienteRepository>();
+        services.AddScoped<IProcessoRepository,           ProcessoRepository>();
+        services.AddScoped<ICompromissoRepository,        CompromissoRepository>();
+        services.AddScoped<IPrazoRepository,              PrazoRepository>();
+        services.AddScoped<IApiKeyRepository,             ApiKeyRepository>();
+        services.AddScoped<IStagingClienteRepository,     StagingClienteRepository>();
+        services.AddScoped<IStagingCompromissoRepository, StagingCompromissoRepository>();
+        services.AddScoped<IStagingProcessoRepository,    StagingProcessoRepository>();
 
         // ─── Health Check ─────────────────────────────────────────────────────────────
         services.AddHealthChecks();

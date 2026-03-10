@@ -44,8 +44,11 @@ public class StagingClienteController : ControllerBase
 
     // ── POST /api/clientes/staging ────────────────────────────────────────
     // Called by the n8n bot (API Key). Creates a Pendente record.
+    // Uses "JwtOrApiKey" policy so the n8n bot can authenticate with X-Api-Key
+    // instead of a JWT Bearer token.
 
     [HttpPost]
+    [Authorize(Policy = "JwtOrApiKey")]
     [ProducesResponseType(typeof(ApiResponse<StagingClienteResponse>), 201)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]
     public async Task<IActionResult> Create(
