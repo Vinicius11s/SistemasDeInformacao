@@ -9,6 +9,7 @@ using Agile360.Shared;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace Agile360.API.Controllers;
 
@@ -23,24 +24,26 @@ namespace Agile360.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/clientes/staging")]
-[Authorize]
 public class StagingClienteController : ControllerBase
 {
     private readonly IStagingClienteRepository _stagingRepo;
     private readonly IClienteRepository _clienteRepo;
     private readonly IUnitOfWork _uow;
     private readonly ICurrentUserService _currentUser;
+    private readonly ILogger<StagingClienteController> _logger;
 
     public StagingClienteController(
         IStagingClienteRepository stagingRepo,
         IClienteRepository clienteRepo,
         IUnitOfWork uow,
-        ICurrentUserService currentUser)
+        ICurrentUserService currentUser,
+        ILogger<StagingClienteController> logger)
     {
         _stagingRepo  = stagingRepo;
         _clienteRepo  = clienteRepo;
         _uow          = uow;
         _currentUser  = currentUser;
+        _logger       = logger;
     }
 
     // ── POST /api/clientes/staging ────────────────────────────────────────
@@ -93,6 +96,9 @@ public class StagingClienteController : ControllerBase
         };
 
         await _stagingRepo.CreateAsync(item, ct);
+        var authMethod = HttpContext.User.FindFirst("auth_method")?.Value ?? "unknown";
+        _logger.LogInformation("[STAGING_CLIENTE] Criado {StagingId} para AdvogadoId {AdvogadoId} via {AuthMethod}",
+            item.Id, item.AdvogadoId, authMethod);
         return StatusCode(201, ApiResponse<StagingClienteResponse>.Ok(Map(item)));
     }
 
@@ -100,6 +106,7 @@ public class StagingClienteController : ControllerBase
     // Dashboard: list all Pendente records for the logged-in advogado.
 
     [HttpGet]
+    [Authorize] // Dashboard: JWT apenas
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<StagingClienteResponse>>), 200)]
     public async Task<IActionResult> List(CancellationToken ct)
     {
@@ -112,6 +119,7 @@ public class StagingClienteController : ControllerBase
     // Dashboard badge: lightweight count endpoint.
 
     [HttpGet("count")]
+    [Authorize] // Dashboard: JWT apenas
     [ProducesResponseType(typeof(ApiResponse<StagingCountResponse>), 200)]
     public async Task<IActionResult> Count(CancellationToken ct)
     {
@@ -123,6 +131,7 @@ public class StagingClienteController : ControllerBase
     // Dashboard: promote staging record → clientes (with full sanitisation & dedup).
 
     [HttpPost("{id:guid}/confirmar")]
+    [Authorize] // Dashboard: JWT apenas
     [ProducesResponseType(typeof(ApiResponse<ClienteResponse>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     [ProducesResponseType(typeof(ApiResponse<object>), 409)]
@@ -177,6 +186,7 @@ public class StagingClienteController : ControllerBase
     // Dashboard: reject / discard staging record.
 
     [HttpDelete("{id:guid}")]
+    [Authorize] // Dashboard: JWT apenas
     [ProducesResponseType(204)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     public async Task<IActionResult> Rejeitar(Guid id, CancellationToken ct)

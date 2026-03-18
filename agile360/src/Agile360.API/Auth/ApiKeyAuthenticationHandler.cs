@@ -44,12 +44,23 @@ public class ApiKeyAuthenticationOptions : AuthenticationSchemeOptions { }
 
             if (!Request.Headers.TryGetValue(ApiKeyAuthenticationDefaults.HeaderName, out var rawKeyValues))
             {
-                Logger.LogDebug("[ApiKey] Header {Header} ausente. Deixando JWT assumir.",
-                    ApiKeyAuthenticationDefaults.HeaderName);
-                return AuthenticateResult.NoResult(); // absent header → try JWT scheme next
+                // Defensive: a coleção de headers do ASP.NET já é case-insensitive,
+                // mas garantimos aqui para cenários em que upstream (túnel/WAF)
+                // pode reenviar com variação de capitalização.
+                var match = Request.Headers.FirstOrDefault(h =>
+                    h.Key.Equals(ApiKeyAuthenticationDefaults.HeaderName, StringComparison.OrdinalIgnoreCase));
+
+                if (string.IsNullOrEmpty(match.Key))
+                {
+                    Logger.LogDebug("[ApiKey] Header {Header} ausente. Deixando JWT assumir.",
+                        ApiKeyAuthenticationDefaults.HeaderName);
+                    return AuthenticateResult.NoResult(); // absent header → try JWT scheme next
+                }
+
+                rawKeyValues = match.Value;
             }
 
-            var rawKey = rawKeyValues.FirstOrDefault();
+            var rawKey = rawKeyValues.FirstOrDefault()?.Trim(); // remove espaços invisíveis antes do hash
             if (string.IsNullOrWhiteSpace(rawKey))
             {
                 Logger.LogWarning("[ApiKey] Header {Header} vazio ou whitespace.",
@@ -59,6 +70,10 @@ public class ApiKeyAuthenticationOptions : AuthenticationSchemeOptions { }
 
             var safePrefix = rawKey.Length >= 8 ? rawKey[..8] : "??";
             var hash = TokenHasher.Hash(rawKey);
+
+            Logger.LogInformation("[ApiKey] Header recebido. prefixo={Prefix} | {Method} {Path}",
+                safePrefix, Request.Method, Request.Path);
+
             Logger.LogDebug("[ApiKey] Tentando autenticar chave com prefixo {Prefix} | hash={Hash}",
                 safePrefix, hash);
 

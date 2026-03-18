@@ -1,4 +1,5 @@
 using System.Text;
+using System.Linq;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Agile360.API.Auth;
 using Agile360.API.Middleware;
@@ -134,6 +135,12 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
         policy.WithOrigins(allowedOrigins).AllowAnyMethod().AllowAnyHeader());
+
+    // Para integrações server-to-server (Postman/n8n) que podem não enviar `Origin`.
+    // Mesmo sem Origin, isso não impede autenticação; só garante que preflight/CORS
+    // não vire um bloqueio silencioso quando Origin existir.
+    options.AddPolicy("ApiIntegration", policy =>
+        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 });
 
 // ─── Controllers + JSON ───────────────────────────────────────────────────────
@@ -209,16 +216,48 @@ app.UseMiddleware<WebhookAuthMiddleware>();
 // estejam presentes mesmo em respostas de erro (401, 403, 429).
 app.UseCors();
 
+// ─── [DIAG] Log de headers brutos — remover após estabilizar autenticação ──────
+// Permite comparar exatamente o que o Swagger envia vs o que Postman/n8n enviam.
+app.Use(async (ctx, next) =>
+{
+    if (ctx.Request.Path.StartsWithSegments("/api/clientes") ||
+        ctx.Request.Path.StartsWithSegments("/api/staging") ||
+        ctx.Request.Path.StartsWithSegments("/api/compromissos") ||
+        ctx.Request.Path.StartsWithSegments("/api/processos"))
+    {
+        var log = ctx.RequestServices.GetRequiredService<ILogger<Program>>();
+        static string Trunc(string? s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            return s.Length > 24 ? s[..24] + "…" : s;
+        }
+
+        var headers = string.Join(" | ",
+            ctx.Request.Headers.Select(h =>
+                $"{h.Key}=[{string.Join(",", h.Value.Select(Trunc))}]"));
+
+        log.LogDebug("[DIAG-HEADERS] {Method} {Path} → {Headers}",
+            ctx.Request.Method, ctx.Request.Path, headers);
+    }
+
+    await next();
+});
+
 app.UseAuthentication();
 app.UseMiddleware<TenantMiddleware>();
 app.UseAuthorization();
 app.UseRateLimiter();
 app.UseSerilogRequestLogging();
 
-if (app.Environment.IsDevelopment())
+if (!app.Environment.IsProduction())
 {
     app.UseSwagger();
-    app.UseSwaggerUI(o => o.SwaggerEndpoint("/swagger/v1/swagger.json", "Agile360 API v1"));
+    app.UseSwaggerUI(o =>
+    {
+        o.SwaggerEndpoint("/swagger/v1/swagger.json", "Agile360 API v1");
+        o.ConfigObject.PersistAuthorization = true;
+        o.DisplayRequestDuration();
+    });
 }
 
 app.MapControllers();

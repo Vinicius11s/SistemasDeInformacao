@@ -4,6 +4,7 @@ using Agile360.Application.StagingCompromissos.DTOs;
 using Agile360.Domain.Entities;
 using Agile360.Domain.Enums;
 using Agile360.Domain.Interfaces;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,7 +21,6 @@ namespace Agile360.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/compromissos/staging")]
-[Authorize]
 public class StagingCompromissoController : ControllerBase
 {
     private readonly IStagingCompromissoRepository _stagingRepo;
@@ -39,6 +39,7 @@ public class StagingCompromissoController : ControllerBase
 
     [HttpPost]
     [Authorize(Policy = "JwtOrApiKey")]
+    [EnableCors("ApiIntegration")] // n8n/Postman não enviam Origin de forma garantida
     [ProducesResponseType(typeof(ApiResponse<StagingCompromissoResponse>), 201)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]
     public async Task<IActionResult> Create(
@@ -79,6 +80,7 @@ public class StagingCompromissoController : ControllerBase
     // ── GET /api/compromissos/staging ─────────────────────────────────────
 
     [HttpGet]
+    [Authorize] // Dashboard: JWT apenas
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<StagingCompromissoResponse>>), 200)]
     public async Task<IActionResult> List(CancellationToken ct)
     {
@@ -90,6 +92,7 @@ public class StagingCompromissoController : ControllerBase
     // ── GET /api/compromissos/staging/count ───────────────────────────────
 
     [HttpGet("count")]
+    [Authorize] // Dashboard: JWT apenas
     [ProducesResponseType(typeof(ApiResponse<StagingCompromissoCountResponse>), 200)]
     public async Task<IActionResult> Count(CancellationToken ct)
     {
@@ -102,6 +105,7 @@ public class StagingCompromissoController : ControllerBase
     // o fluxo de criação de Compromisso estiver definido).
 
     [HttpPost("{id:guid}/confirmar")]
+    [Authorize] // Dashboard: JWT apenas
     [ProducesResponseType(typeof(ApiResponse<object>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     public async Task<IActionResult> Confirmar(Guid id, CancellationToken ct)
@@ -125,6 +129,7 @@ public class StagingCompromissoController : ControllerBase
     // ── DELETE /api/compromissos/staging/{id} ─────────────────────────────
 
     [HttpDelete("{id:guid}")]
+    [Authorize] // Dashboard: JWT apenas
     [ProducesResponseType(204)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     public async Task<IActionResult> Rejeitar(Guid id, CancellationToken ct)

@@ -3,19 +3,28 @@ using Agile360.Domain.Enums;
 using Agile360.Domain.Interfaces;
 using Agile360.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Agile360.Infrastructure.Repositories;
 
 public class StagingClienteRepository : IStagingClienteRepository
 {
     private readonly Agile360DbContext _db;
+    private readonly ILogger<StagingClienteRepository> _logger;
 
-    public StagingClienteRepository(Agile360DbContext db) => _db = db;
+    public StagingClienteRepository(
+        Agile360DbContext db,
+        ILogger<StagingClienteRepository> logger)
+    {
+        _db = db;
+        _logger = logger;
+    }
 
     public async Task<StagingCliente> CreateAsync(StagingCliente item, CancellationToken ct = default)
     {
         _db.StagingClientes.Add(item);
         await _db.SaveChangesAsync(ct);
+        _logger.LogInformation("[StagingCliente] Inserido em staging_cliente. stagingId={StagingId} advogadoId={AdvogadoId}", item.Id, item.AdvogadoId);
         return item;
     }
 

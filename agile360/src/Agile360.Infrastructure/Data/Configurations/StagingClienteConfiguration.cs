@@ -11,8 +11,8 @@ public class StagingClienteConfiguration : IEntityTypeConfiguration<StagingClien
         builder.ToTable("staging_cliente");
         builder.HasKey(e => e.Id);
 
-        // FK: banco já existente usa coluna "advogado_id"
-        builder.Property(e => e.AdvogadoId).HasColumnName("advogado_id");
+        // FK: banco já existente usa coluna "id_advogado"
+        builder.Property(e => e.AdvogadoId).HasColumnName("id_advogado");
 
         // Constraints — nomes gerados automaticamente pelo UseSnakeCaseNamingConvention
         builder.Property(e => e.TipoPessoa)        .HasConversion<string>().HasMaxLength(20).IsRequired();

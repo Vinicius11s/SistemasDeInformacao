@@ -4,6 +4,7 @@ using Agile360.Application.StagingProcessos.DTOs;
 using Agile360.Domain.Entities;
 using Agile360.Domain.Enums;
 using Agile360.Domain.Interfaces;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,7 +21,6 @@ namespace Agile360.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/processos/staging")]
-[Authorize]
 public class StagingProcessoController : ControllerBase
 {
     private readonly IStagingProcessoRepository _stagingRepo;
@@ -39,6 +39,7 @@ public class StagingProcessoController : ControllerBase
 
     [HttpPost]
     [Authorize(Policy = "JwtOrApiKey")]
+    [EnableCors("ApiIntegration")] // n8n/Postman não enviam Origin de forma garantida
     [ProducesResponseType(typeof(ApiResponse<StagingProcessoResponse>), 201)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]
     public async Task<IActionResult> Create(
@@ -83,6 +84,7 @@ public class StagingProcessoController : ControllerBase
     // ── GET /api/processos/staging ────────────────────────────────────────
 
     [HttpGet]
+    [Authorize] // Dashboard: JWT apenas
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<StagingProcessoResponse>>), 200)]
     public async Task<IActionResult> List(CancellationToken ct)
     {
@@ -94,6 +96,7 @@ public class StagingProcessoController : ControllerBase
     // ── GET /api/processos/staging/count ──────────────────────────────────
 
     [HttpGet("count")]
+    [Authorize] // Dashboard: JWT apenas
     [ProducesResponseType(typeof(ApiResponse<StagingProcessoCountResponse>), 200)]
     public async Task<IActionResult> Count(CancellationToken ct)
     {
@@ -106,6 +109,7 @@ public class StagingProcessoController : ControllerBase
     // o fluxo de criação de Processo estiver definido).
 
     [HttpPost("{id:guid}/confirmar")]
+    [Authorize] // Dashboard: JWT apenas
     [ProducesResponseType(typeof(ApiResponse<object>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     public async Task<IActionResult> Confirmar(Guid id, CancellationToken ct)
@@ -129,6 +133,7 @@ public class StagingProcessoController : ControllerBase
     // ── DELETE /api/processos/staging/{id} ───────────────────────────────
 
     [HttpDelete("{id:guid}")]
+    [Authorize] // Dashboard: JWT apenas
     [ProducesResponseType(204)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     public async Task<IActionResult> Rejeitar(Guid id, CancellationToken ct)
