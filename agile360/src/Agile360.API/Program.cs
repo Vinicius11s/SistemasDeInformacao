@@ -15,6 +15,8 @@ using Serilog;
 var builder = WebApplication.CreateBuilder(args);
 
 // Serilog
+/*cloudflared tunnel --url http://localhost:5000/ */
+
 builder.Host.UseSerilog((ctx, lc) =>
 {
     lc.ReadFrom.Configuration(ctx.Configuration)
@@ -94,9 +96,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 return Task.CompletedTask;
             }
         };
-    })
-    .AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(
-        ApiKeyAuthenticationDefaults.AuthenticationScheme, _ => { });
+    });
 
 // MasterServiceKey: Hub Central / n8n (usa X-On-Behalf-Of para selecionar o tenant)
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -120,7 +120,6 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("JwtOrApiKey",
         new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder(
                 JwtBearerDefaults.AuthenticationScheme,
-                ApiKeyAuthenticationDefaults.AuthenticationScheme,
                 MasterServiceKeyAuthenticationDefaults.AuthenticationScheme)
             .RequireAuthenticatedUser()
             .Build());
@@ -173,27 +172,6 @@ builder.Services.AddSwaggerGen(options =>
         Description = "Agile360 – CRM Jurídico API"
     });
 
-    // ─── Suporte a API Key (X-Api-Key) no Swagger UI ─────────────────────────────
-    var apiKeyScheme = new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-    {
-        Name   = ApiKeyAuthenticationDefaults.HeaderName,
-        In     = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Type   = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
-        Scheme = ApiKeyAuthenticationDefaults.AuthenticationScheme,
-        Description = "Chave de integração Agile360. Envie o valor bruto gerado em Configurações → Integrações.\n\nHeader: X-Api-Key: <sua-chave>",
-        Reference = new Microsoft.OpenApi.Models.OpenApiReference
-        {
-            Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-            Id   = ApiKeyAuthenticationDefaults.AuthenticationScheme
-        }
-    };
-
-    options.AddSecurityDefinition(ApiKeyAuthenticationDefaults.AuthenticationScheme, apiKeyScheme);
-
-    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-    {
-        [apiKeyScheme] = Array.Empty<string>()
-    });
 });
 
 // ─── Webhook / Tenant ─────────────────────────────────────────────────────────
@@ -245,15 +223,13 @@ app.Use(async (ctx, next) =>
         var headers = string.Join(" | ",
             ctx.Request.Headers.Select(h =>
             {
-                var isApiKeyHeader =
-                    h.Key.Equals(ApiKeyAuthenticationDefaults.HeaderName, StringComparison.OrdinalIgnoreCase);
-                var isMasterKeyHeader =
+                        var isMasterKeyHeader =
                     h.Key.Equals(MasterServiceKeyAuthenticationDefaults.MasterKeyHeaderName, StringComparison.OrdinalIgnoreCase);
 
                 var maskedValues = h.Value.Select(v =>
                 {
                     var trimmed = v?.Trim() ?? "";
-                    if (!isApiKeyHeader && !isMasterKeyHeader)
+                    if (!isMasterKeyHeader)
                         return Trunc(trimmed);
 
                     if (string.IsNullOrEmpty(trimmed))

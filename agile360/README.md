@@ -1,5 +1,6 @@
 # Agile360
 
+# cloudflared tunnel --url http://localhost:5000
 **CRM Jurídico – Visão 360 e Esforço Zero**
 
 Sistema para advogados que centraliza clientes, processos, audiências e prazos, com integração WhatsApp, monitor de intimações e guardião de prazos.

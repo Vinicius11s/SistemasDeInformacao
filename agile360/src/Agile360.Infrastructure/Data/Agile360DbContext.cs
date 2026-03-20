@@ -30,7 +30,6 @@ public class Agile360DbContext : DbContext
     // Tabelas ainda não criadas no banco — DbSet disponível para migrations futuras,
     // mas as configurations abaixo mapeiam corretamente os nomes quando existirem.
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
-    public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
     public DbSet<EntradaIA> EntradasIA => Set<EntradaIA>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -88,7 +88,6 @@ public static class DependencyInjection
         services.AddScoped<IProcessoRepository,           ProcessoRepository>();
         services.AddScoped<ICompromissoRepository,        CompromissoRepository>();
         services.AddScoped<IPrazoRepository,              PrazoRepository>();
-        services.AddScoped<IApiKeyRepository,             ApiKeyRepository>();
         services.AddScoped<IStagingClienteRepository,     StagingClienteRepository>();
         services.AddScoped<IStagingCompromissoRepository, StagingCompromissoRepository>();
         services.AddScoped<IStagingProcessoRepository,    StagingProcessoRepository>();

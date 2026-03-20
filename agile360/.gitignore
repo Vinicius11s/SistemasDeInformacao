@@ -64,3 +64,36 @@ node_modules/
 frontend/dist/
 frontend/.env
 frontend/.env.local
+
+# Environment & Secrets (AIOX)
+.env.local
+.env.*.local
+*.key
+*.pem
+
+# Dependencies (AIOX)
+node_modules
+
+# Build & Logs (AIOX)
+dist/
+build/
+logs/
+
+# AIOX Local (AIOX)
+.aiox-core/local/
+.claude/settings.local.json
+.aiox/install-log.txt
+
+# IDEs locais
+.gemini/
+.cursor/
+.aiox-core
+.claude
+.github/agents/
+# Local CLI configs
+.codex/
+.antigravity/
+
+# Env backups
+*.backup.*
+.env.backup*
