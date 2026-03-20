@@ -25,7 +25,9 @@ public class MfaService : IMfaService
 {
     private const string Issuer = "Agile360";
     private const int TotpStep = 30;      // seconds per code
-    private const int VerifyWindow = 1;   // ±1 step tolerance (~30s cada lado, per RFC 6238 §5.2)
+    // Carência temporária: ±2 minutos.
+    // Cada passo do TOTP = 30s → 2 min / 30s = 4 passos.
+    private const int VerifyWindow = 4;   // ±4 steps tolerance (~±120s)
 
     private readonly Agile360DbContext _db;
     private readonly byte[] _encKey;
@@ -186,7 +188,9 @@ public class MfaService : IMfaService
             return false;
 
         var plainSecret = Decrypt(advogado.MfaSecret);
-        return VerifyCode(plainSecret, code);
+        // Passa logger para produzir logs diagnósticos (serverUtcEpoch/window/matchedStep)
+        // sem vazar o segredo TOTP ou o código digitado.
+        return VerifyCode(plainSecret, code, logger: _logger);
     }
 
     // ── Status ────────────────────────────────────────────────────────────
@@ -259,6 +263,18 @@ public class MfaService : IMfaService
                 expectedCode == trimmed,
                 ok,
                 ok ? matchedStep : -1L);
+
+            // Log "aparecível" mesmo em níveis acima de Debug:
+            // ajuda a distinguir drift vs token/secret inconsistente.
+            if (logger != null && !ok)
+            {
+                logger.LogWarning(
+                    "[MFA-TOTP] VerifyTotp falhou — serverUtcEpoch: {Epoch} | step: {Step}s | window: ±{Win} | matchedStep: {MatchedStep}",
+                    serverUtc.ToUnixTimeSeconds(),
+                    TotpStep,
+                    VerifyWindow,
+                    matchedStep);
+            }
 
             return ok;
         }

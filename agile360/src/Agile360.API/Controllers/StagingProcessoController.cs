@@ -13,28 +13,36 @@ namespace Agile360.API.Controllers;
 /// <summary>
 /// Gerencia a fila de aprovação de processos enviados pelo bot WhatsApp/n8n.
 ///
-/// POST   /api/processos/staging             → n8n (API Key): salva registro pendente
-/// GET    /api/processos/staging             → dashboard (JWT): lista pendentes
-/// GET    /api/processos/staging/count       → dashboard (JWT): badge de notificação
-/// POST   /api/processos/staging/{id}/confirmar → dashboard (JWT): promove para processos
-/// DELETE /api/processos/staging/{id}        → dashboard (JWT): rejeita/descarta
+/// POST   /api/processo/staging             → n8n (API Key): salva registro pendente
+/// GET    /api/processo/staging             → dashboard (JWT): lista pendentes
+/// GET    /api/processo/staging/count       → dashboard (JWT): badge de notificação
+/// POST   /api/processo/staging/{id}/confirmar → dashboard (JWT): promove para processos
+/// DELETE /api/processo/staging/{id}        → dashboard (JWT): rejeita/descarta
 /// </summary>
 [ApiController]
-[Route("api/processos/staging")]
+[Route("api/processo/staging")]
 public class StagingProcessoController : ControllerBase
 {
     private readonly IStagingProcessoRepository _stagingRepo;
-    private readonly ICurrentUserService        _currentUser;
+    private readonly IProcessoRepository      _processoRepo;
+    private readonly IClienteRepository       _clienteRepo;
+    private readonly ICurrentUserService     _currentUser;
 
     public StagingProcessoController(
         IStagingProcessoRepository stagingRepo,
-        ICurrentUserService currentUser)
+        ICurrentUserService currentUser,
+        IProcessoRepository processoRepo,
+        IClienteRepository clienteRepo)
     {
         _stagingRepo = stagingRepo;
+        _processoRepo = processoRepo;
+        _clienteRepo = clienteRepo;
         _currentUser = currentUser;
     }
 
-    // ── POST /api/processos/staging ───────────────────────────────────────
+    public record ConfirmarStagingProcessoRequest(Guid? IdCliente);
+
+    // ── POST /api/processo/staging ───────────────────────────────────────
     // Chamado pelo bot n8n com API Key. Cria um registro Pendente.
 
     [HttpPost]
@@ -58,7 +66,7 @@ public class StagingProcessoController : ControllerBase
         {
             Id                  = Guid.NewGuid(),
             AdvogadoId          = _currentUser.AdvogadoId,
-            NumProcesso         = request.NumProcesso,
+            NumProcesso         = NormalizeNumProcesso(request.NumProcesso),
             ParteContraria      = request.ParteContraria,
             Tribunal            = request.Tribunal,
             ComarcaVara         = request.ComarcaVara,
@@ -81,7 +89,7 @@ public class StagingProcessoController : ControllerBase
         return StatusCode(201, ApiResponse<StagingProcessoResponse>.Ok(Map(item)));
     }
 
-    // ── GET /api/processos/staging ────────────────────────────────────────
+    // ── GET /api/processo/staging ────────────────────────────────────────
 
     [HttpGet]
     [Authorize]
@@ -93,7 +101,7 @@ public class StagingProcessoController : ControllerBase
             items.Select(Map).ToList()));
     }
 
-    // ── GET /api/processos/staging/count ──────────────────────────────────
+    // ── GET /api/processo/staging/count ──────────────────────────────────
 
     [HttpGet("count")]
     [Authorize]
@@ -104,33 +112,141 @@ public class StagingProcessoController : ControllerBase
         return Ok(ApiResponse<StagingProcessoCountResponse>.Ok(new StagingProcessoCountResponse(count)));
     }
 
-    // ── POST /api/processos/staging/{id}/confirmar ────────────────────────
-    // Dashboard: promove staging → processo (a ser implementado pelo @dev quando
-    // o fluxo de criação de Processo estiver definido).
+    // ── PATCH /api/processo/staging/{id} ──────────────────────────────
+    // Dashboard: permite ao advogado editar campos antes de confirmar.
+    [HttpPatch("{id:guid}")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResponse<StagingProcessoResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> AtualizarParcial(Guid id, [FromBody] UpdateStagingProcessoRequest request, CancellationToken ct)
+    {
+        if (request is null)
+            return BadRequest(ApiResponse<object>.Fail("Payload inválido.", statusCode: 400));
+
+        var item = await _stagingRepo.GetByIdAsync(id, _currentUser.AdvogadoId, ct);
+        if (item is null || item.Status != StagingStatus.Pendente)
+            return NotFound(ApiResponse<object>.Fail("Registro pendente não encontrado.", statusCode: 404));
+
+        if (request.NumProcesso is not null)
+            item.NumProcesso = NormalizeNumProcesso(request.NumProcesso);
+
+        if (request.ParteContraria is not null)
+            item.ParteContraria = request.ParteContraria;
+
+        if (request.ValorCausa.HasValue)
+            item.ValorCausa = request.ValorCausa;
+
+        if (request.Tribunal is not null)
+            item.Tribunal = request.Tribunal;
+
+        if (request.ComarcaVara is not null)
+            item.ComarcaVara = request.ComarcaVara;
+
+        if (request.Assunto is not null)
+            item.Assunto = request.Assunto;
+
+        await _stagingRepo.UpdateAsync(item, ct);
+
+        return Ok(ApiResponse<StagingProcessoResponse>.Ok(Map(item)));
+    }
+
+    // ── POST /api/processo/staging/{id}/confirmar ────────────────────────
+    // Dashboard: promove staging → processo (cria o registro em produção).
 
     [HttpPost("{id:guid}/confirmar")]
     [Authorize]
     [ProducesResponseType(typeof(ApiResponse<object>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
-    public async Task<IActionResult> Confirmar(Guid id, CancellationToken ct)
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    public async Task<IActionResult> Confirmar(Guid id, [FromBody] ConfirmarStagingProcessoRequest? request, CancellationToken ct)
     {
         var staging = await _stagingRepo.GetByIdAsync(id, _currentUser.AdvogadoId, ct);
         if (staging is null || staging.Status != StagingStatus.Pendente)
             return NotFound(ApiResponse<object>.Fail(
                 "Registro pendente não encontrado ou já processado.", statusCode: 404));
 
-        // TODO (próxima story): criar o Processo em produção aqui,
-        // vincular ao Cliente existente e chamar ConfirmarAsync com o Guid gerado.
-        // Por ora, confirma o staging sem criar o processo de produção.
-        var confirmed = await _stagingRepo.ConfirmarAsync(id, _currentUser.AdvogadoId, Guid.Empty, ct);
+        if (string.IsNullOrWhiteSpace(staging.NumProcesso))
+            return BadRequest(ApiResponse<object>.Fail("Número do processo inválido.", statusCode: 400));
+
+        Guid? idCliente = request?.IdCliente;
+
+        // Tentativa de resolução automática via CPF (quando o bot manda um identificador em ClienteNome).
+        if (idCliente is null && !string.IsNullOrWhiteSpace(staging.ClienteNome))
+        {
+            var cpf = Agile360.Shared.DocumentSanitizer.Sanitize(staging.ClienteNome);
+            if (!string.IsNullOrWhiteSpace(cpf))
+            {
+                if (cpf!.Length == 11)
+                {
+                    var cliente = await _clienteRepo.GetByCpfAsync(cpf, ct);
+                    if (cliente is not null) idCliente = cliente.Id;
+                }
+            }
+        }
+
+        if (idCliente is null)
+            return BadRequest(ApiResponse<object>.Fail(
+                "Selecione/identifique um cliente (id_cliente) para vincular este processo.", statusCode: 400));
+
+        var numProcessoCanonical = NormalizeNumProcesso(staging.NumProcesso);
+
+        var existente = await _processoRepo.GetByNumeroAsync(numProcessoCanonical, ct);
+        if (existente is not null)
+            return Conflict(ApiResponse<object>.Fail(
+                $"Já existe um processo com o número '{numProcessoCanonical}'.", statusCode: 409));
+
+        var processo = new Processo
+        {
+            Id = Guid.NewGuid(),
+            AdvogadoId = _currentUser.AdvogadoId,
+            ClienteId = idCliente,
+            NumProcesso = numProcessoCanonical,
+            ParteContraria = staging.ParteContraria,
+            Tribunal = staging.Tribunal,
+            ComarcaVara = staging.ComarcaVara,
+            Assunto = staging.Assunto,
+            ValorCausa = staging.ValorCausa,
+            HonorariosEstimados = staging.HonorariosEstimados,
+            FaseProcessual = staging.FaseProcessual,
+            Status = staging.StatusProcesso ?? "Ativo",
+            DataDistribuicao = staging.DataDistribuicao,
+            Observacoes = staging.Observacoes,
+        };
+
+        await _processoRepo.AddAsync(processo, ct);
+
+        var confirmed = await _stagingRepo.ConfirmarAsync(id, _currentUser.AdvogadoId, processo.Id, ct);
         if (!confirmed)
             return NotFound(ApiResponse<object>.Fail(
                 "Registro pendente não encontrado ou já processado.", statusCode: 404));
 
-        return Ok(ApiResponse<object>.Ok(new { mensagem = "Processo confirmado e aguardando vinculação." }));
+        return Ok(ApiResponse<object>.Ok(new { mensagem = "Processo confirmado com sucesso.", processo_id = processo.Id }));
     }
 
-    // ── DELETE /api/processos/staging/{id} ───────────────────────────────
+    // ── Normalização CNJ (remove pontuação e reformat para padrão canônico) ──
+    // CNJ (antigo) esperado: NNNNNNN-DD.AAAA.J.T.OOOO → 20 dígitos.
+    // Ex.: 0000000-00.2026.8.26.0000
+    private static string NormalizeNumProcesso(string? input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return string.Empty;
+
+        var digits = Agile360.Shared.DocumentSanitizer.OnlyDigits(input);
+        if (string.IsNullOrWhiteSpace(digits)) return input.Trim();
+
+        if (digits.Length != 20) return digits;
+
+        var n7 = digits[..7];
+        var dd = digits.Substring(7, 2);
+        var yyyy = digits.Substring(9, 4);
+        var j = digits[13];
+        var t = digits.Substring(14, 2);
+        var oooo = digits.Substring(16, 4);
+
+        return $"{n7}-{dd}.{yyyy}.{j}.{t}.{oooo}";
+    }
+
+    // ── DELETE /api/processo/staging/{id} ───────────────────────────────
 
     [HttpDelete("{id:guid}")]
     [Authorize]

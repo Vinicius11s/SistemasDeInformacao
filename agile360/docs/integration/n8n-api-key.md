@@ -1,4 +1,11 @@
-# Agile360 × n8n — Autenticação com API Key
+# Agile360 × n8n — Autenticação com API Key (LEGADO)
+
+Este documento descreve a abordagem antiga via `X-Api-Key`.
+Para o modelo atual “Hub Central”, use:
+- `X-Master-Service-Key`
+- `X-On-Behalf-Of`
+
+Veja: `docs/integration/n8n-hub-central-master-key.md`
 
 ## Por que API Key e não JWT?
 

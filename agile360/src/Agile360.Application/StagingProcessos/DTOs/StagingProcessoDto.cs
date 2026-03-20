@@ -43,5 +43,18 @@ public record CreateStagingProcessoRequest(
     string?   OrigemMensagem // Texto bruto da mensagem WhatsApp — contexto para revisão
 );
 
+/// <summary>
+/// Request DTO usada pelo advogado para editar antes da ativação.
+/// Todos os campos são opcionais; valores nulos não alteram o staging.
+/// </summary>
+public record UpdateStagingProcessoRequest(
+    string?  NumProcesso,
+    string?  ParteContraria,
+    decimal? ValorCausa,
+    string?  Tribunal,
+    string?  ComarcaVara,
+    string?  Assunto
+);
+
 /// <summary>Resumo leve para badge / card do dashboard.</summary>
 public record StagingProcessoCountResponse(int Pendentes);

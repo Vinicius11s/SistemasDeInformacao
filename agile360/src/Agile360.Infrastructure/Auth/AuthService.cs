@@ -232,20 +232,91 @@ public class AuthService : IAuthService
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(tempToken))
+            {
+                _logger.LogWarning("[MFA-TEMP-TOKEN] tempToken está vazio/null.");
+                return null;
+            }
+
+            // Debug controlado: não logar token completo (sensível).
+            var tokenPrefix = tempToken.Length >= 12 ? tempToken[..12] : tempToken;
+            _logger.LogDebug("[MFA-TEMP-TOKEN] início validação (prefixo={Prefix}, len={Len})",
+                tokenPrefix, tempToken.Length);
+
             var parts = tempToken.Split('.');
-            if (parts.Length < 2) return null;
+            if (parts.Length < 2)
+            {
+                _logger.LogWarning(
+                    "[MFA-TEMP-TOKEN] token não parece JWT (parts.Length={PartsLen}, prefixo={Prefix})",
+                    parts.Length, tokenPrefix);
+                return null;
+            }
+
+            // JWT usa base64url (caracteres '-' e '_'), mas Convert.FromBase64String espera base64 padrão.
+            // Converter base64url -> base64 antes de decodificar.
+            var payloadPart = parts[1]
+                .Replace('-', '+')
+                .Replace('_', '/');
+
+            _logger.LogDebug("[MFA-TEMP-TOKEN] base64url->base64 pronto (payloadPartLen={Len})",
+                payloadPart.Length);
 
             var payload = System.Text.Encoding.UTF8.GetString(
-                Convert.FromBase64String(PadBase64(parts[1])));
+                Convert.FromBase64String(PadBase64(payloadPart)));
             var doc = System.Text.Json.JsonDocument.Parse(payload);
+
+            // Opcional: logar exp para diagnosticar “token expirou”.
+            if (doc.RootElement.TryGetProperty("exp", out var expEl) &&
+                expEl.ValueKind == System.Text.Json.JsonValueKind.Number &&
+                expEl.TryGetInt64(out var expSeconds))
+            {
+                var expUtc = DateTimeOffset.FromUnixTimeSeconds(expSeconds);
+                _logger.LogDebug("[MFA-TEMP-TOKEN] exp={Exp} (utcNow={Now})",
+                    expUtc.ToString("o"), DateTimeOffset.UtcNow.ToString("o"));
+            }
 
             if (doc.RootElement.TryGetProperty("sub", out var sub)
                 && Guid.TryParse(sub.GetString(), out var id))
+            {
+                _logger.LogDebug("[MFA-TEMP-TOKEN] sub encontrado e válido (advogadoId={Id})",
+                    id);
                 return id;
+            }
+
+            if (doc.RootElement.TryGetProperty("sub", out var sub2))
+            {
+                _logger.LogWarning(
+                    "[MFA-TEMP-TOKEN] sub presente mas não é UUID válido (subType={Type}, subSample={SubSample})",
+                    sub2.ValueKind, sub2.GetString() is { } s ? s[..Math.Min(8, s.Length)] : "(null)");
+                return null;
+            }
+
+            _logger.LogWarning("[MFA-TEMP-TOKEN] sub não existe no payload. prefixo={Prefix}",
+                tokenPrefix);
 
             return null;
         }
-        catch { return null; }
+        catch (FormatException ex)
+        {
+            _logger.LogError(ex,
+                "[MFA-TEMP-TOKEN] falha de Base64/format (prefixo={Prefix})",
+                tempToken.Length >= 12 ? tempToken[..12] : tempToken);
+            return null;
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            _logger.LogError(ex,
+                "[MFA-TEMP-TOKEN] payload JSON inválido (prefixo={Prefix})",
+                tempToken.Length >= 12 ? tempToken[..12] : tempToken);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "[MFA-TEMP-TOKEN] falha inesperada ao validar (prefixo={Prefix})",
+                tempToken.Length >= 12 ? tempToken[..12] : tempToken);
+            return null;
+        }
     }
 
     /// <summary>
@@ -256,10 +327,22 @@ public class AuthService : IAuthService
         string tempToken, string totpCode, CancellationToken ct = default)
     {
         var advogadoId = ValidateMfaTempToken(tempToken);
-        if (advogadoId == null) return null;
+        if (advogadoId == null)
+        {
+            _logger.LogWarning(
+                "[MFA-CHALLENGE] CompleteMfaChallengeAsync: advogadoId null (token inválido). prefixo={Prefix}",
+                tempToken.Length >= 12 ? tempToken[..12] : tempToken);
+            return null;
+        }
 
         var profile = await GetProfileByIdAsync(advogadoId.Value, tempToken, ct);
-        if (profile == null) return null;
+        if (profile == null)
+        {
+            _logger.LogWarning(
+                "[MFA-CHALLENGE] CompleteMfaChallengeAsync: profile null. advogadoId={AdvogadoId}",
+                advogadoId.Value);
+            return null;
+        }
 
         var expiresAt = DateTimeOffset.UtcNow.AddMinutes(15);
         return AuthResult.Ok(new AuthResponse(tempToken, string.Empty, expiresAt, profile));

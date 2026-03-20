@@ -62,4 +62,12 @@ public class StagingCompromissoRepository : IStagingCompromissoRepository
         await _db.SaveChangesAsync(ct);
         return true;
     }
+
+    public async Task<bool> UpdateAsync(StagingCompromisso item, CancellationToken ct = default)
+    {
+        if (item is null) return false;
+        item.UpdatedAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        return true;
+    }
 }

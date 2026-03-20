@@ -71,4 +71,14 @@ public class StagingClienteRepository : IStagingClienteRepository
         await _db.SaveChangesAsync(ct);
         return true;
     }
+
+    public async Task<bool> UpdateAsync(StagingCliente item, CancellationToken ct = default)
+    {
+        if (item is null) return false;
+
+        // Entidade deve estar rastreada (GetByIdAsync não usa AsNoTracking).
+        item.UpdatedAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        return true;
+    }
 }

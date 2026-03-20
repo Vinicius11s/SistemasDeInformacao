@@ -36,7 +36,11 @@ public class StagingClienteConfiguration : IEntityTypeConfiguration<StagingClien
         builder.Property(e => e.AreaAtuacao)       .HasMaxLength(200);
         builder.Property(e => e.NumeroConta)       .HasMaxLength(50);
         builder.Property(e => e.Pix)               .HasMaxLength(100);
-        builder.Property(e => e.WhatsAppNumero)    .HasMaxLength(20);
+        // A convenção geraria "whats_app_numero" por causa de "WhatsApp",
+        // mas o schema do Postgres usa "whatsapp_numero".
+        builder.Property(e => e.WhatsAppNumero)
+            .HasColumnName("whatsapp_numero")
+            .HasMaxLength(20);
         builder.Property(e => e.Origem)            .HasConversion<string>().HasMaxLength(20);
         builder.Property(e => e.Status)            .HasConversion<string>().HasMaxLength(20).IsRequired();
 
@@ -44,6 +48,9 @@ public class StagingClienteConfiguration : IEntityTypeConfiguration<StagingClien
         builder.Ignore(e => e.IsExpired);
 
         builder.HasIndex(e => new { e.AdvogadoId, e.Status });
+        // A query do dashboard filtra por id_advogado + status + expires_at.
+        // Índice composto melhora o COUNT e reduz chance de varredura completa.
+        builder.HasIndex(e => new { e.AdvogadoId, e.Status, e.ExpiresAt });
         builder.HasIndex(e => e.ExpiresAt);
     }
 }

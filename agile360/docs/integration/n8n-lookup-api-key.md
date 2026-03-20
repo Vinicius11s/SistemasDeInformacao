@@ -1,4 +1,11 @@
-# n8n – Lookup automático de API Key pelo número do WhatsApp
+# n8n – Lookup automático de API Key pelo número do WhatsApp (LEGADO)
+
+Este documento descreve a abordagem anterior baseada em `X-Api-Key`.
+O fluxo atual (recomendado) é o **Hub Central**:
+- Consulte `public.advogado_whatsapp`
+- Autentique com `X-Master-Service-Key` + `X-On-Behalf-Of`
+
+Veja: `docs/integration/n8n-hub-central-master-key.md`
 
 ## Visão geral
 

@@ -1,4 +1,6 @@
 using System.Data.Common;
+using System.Diagnostics;
+using Agile360.Application.Interfaces;
 using Agile360.Domain.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -44,6 +46,7 @@ public record PrazoDashboard(
 
 public record DashboardResumo(
     DashboardContadores                Contadores,
+    int                                 TotalStagingPendente,
     IReadOnlyList<CompromissoDashboard> CompromissosSemana,
     IReadOnlyList<ProcessoDashboard>    ProcessosRecentes,
     IReadOnlyList<PrazoDashboard>       PrazosProximos
@@ -62,6 +65,8 @@ public class DashboardController(
     ICompromissoRepository compromissoRepo,
     IProcessoRepository    processoRepo,
     IPrazoRepository       prazoRepo,
+    IStagingClienteRepository stagingRepo,
+    ICurrentUserService      currentUser,
     ILogger<DashboardController> logger) : ControllerBase
 {
     // GET /api/dashboard/resumo
@@ -82,8 +87,20 @@ public class DashboardController(
             var prazosProximos     = await prazoRepo.GetProximosAsync(5, ct);
             var prazosFatais       = await prazoRepo.GetVencimentoProximoAsync(3, ct);
 
+            var swStagingCount = Stopwatch.StartNew();
+            var totalStagingPendente = await stagingRepo.CountPendentesAsync(currentUser.AdvogadoId, ct);
+            swStagingCount.Stop();
+            if (swStagingCount.ElapsedMilliseconds > 1000)
+            {
+                logger.LogWarning(
+                    "[Dashboard] CountPendentes demorou {ElapsedMs}ms (tenant={AdvogadoId}).",
+                    swStagingCount.ElapsedMilliseconds, currentUser.AdvogadoId);
+            }
+
             logger.LogDebug("[Dashboard] Dados carregados — compromissos hoje: {N1}, semana: {N2}, processos: {N3}, prazos: {N4}",
                 compromissosHoje.Count, compromissosSemana.Count, processosRecentes.Count, prazosProximos.Count);
+            logger.LogDebug("[Dashboard] Total staging pendente para o tenant {AdvogadoId}: {Total}",
+                currentUser.AdvogadoId, totalStagingPendente);
 
             // tipo_compromisso no banco: "audiencia" | "atendimento" (lowercase)
             var contadores = new DashboardContadores(
@@ -124,7 +141,12 @@ public class DashboardController(
                     p.ClienteId?.ToString()))
                 .ToList();
 
-            return Ok(new DashboardResumo(contadores, semana, recentes, prazos));
+            return Ok(new DashboardResumo(
+                contadores,
+                TotalStagingPendente: totalStagingPendente,
+                semana,
+                recentes,
+                prazos));
         }
         catch (OperationCanceledException)
         {
@@ -154,6 +176,7 @@ public class DashboardController(
     {
         return new DashboardResumo(
             new DashboardContadores(0, 0, 0, 0),
+            TotalStagingPendente: 0,
             [],
             [],
             []);

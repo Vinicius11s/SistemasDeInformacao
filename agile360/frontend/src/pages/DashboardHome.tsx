@@ -8,6 +8,7 @@ import {
   RefreshCw,
   Clock,
   MapPin,
+  MessageSquare,
   Gavel,
   Briefcase,
   ArrowRight,
@@ -670,20 +671,32 @@ export function DashboardHome() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const carregar = useCallback(async (silencioso = false) => {
-    if (!token) return;
+    // Se token estiver ausente, não deixa o "loading" preso.
+    if (!token) {
+      setLoading(false);
+      setRefreshing(false);
+      setErro('Sessão inválida. Faça login novamente.');
+      return;
+    }
+
     if (!silencioso) setLoading(true);
     else             setRefreshing(true);
     setErro(null);
 
-    const res = await dashboardApi.resumo(token);
-    if (res.success && res.data) {
-      setDados(res.data);
-      setAtualizadoEm(new Date());
-    } else {
-      setErro(res.error?.message ?? 'Erro ao carregar o painel.');
+    try {
+      const res = await dashboardApi.resumo(token);
+      if (res.success && res.data) {
+        setDados(res.data);
+        setAtualizadoEm(new Date());
+      } else {
+        setErro(res.error?.message ?? 'Erro ao carregar o painel.');
+      }
+    } catch (e) {
+      setErro('Erro ao carregar o painel (falha de rede ou resposta inesperada).');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-    setLoading(false);
-    setRefreshing(false);
   }, [token]);
 
   useEffect(() => { carregar(); }, [carregar]);
@@ -703,6 +716,7 @@ export function DashboardHome() {
 
   const contadores = dados?.contadores;
   const prazosAtivos = (contadores?.prazos_fatais ?? 0) > 0;
+  const totalStagingPendente = dados?.total_staging_pendente ?? 0;
 
   return (
     <div className="mx-auto max-w-[1280px] space-y-6">
@@ -767,6 +781,39 @@ export function DashboardHome() {
           </button>
         </div>
       </div>
+
+      {/* ── Banner de alerta — Aprovações Pendentes ───────────── */}
+      {!loading && totalStagingPendente > 0 && (
+        <div
+          className="flex items-start gap-3 rounded-[var(--radius-lg)] px-4 py-3"
+          style={{
+            border:     '1px solid rgba(248,113,113,.20)',
+            background: 'var(--color-error-bg)',
+          }}
+          role="alert"
+        >
+          <MessageSquare
+            size={16}
+            style={{ color: 'var(--color-error)', marginTop: 1, flexShrink: 0 }}
+          />
+          <div className="flex-1">
+            <p className="text-sm font-semibold" style={{ color: 'var(--color-error)' }}>
+              Você possui {totalStagingPendente} novos{' '}
+              {totalStagingPendente === 1 ? 'lead/cliente' : 'leads/clientes'} aguardando aprovação via WhatsApp.
+            </p>
+            <p className="mt-0.5 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+              Revise e confirme quando possível.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/app/staging')}
+            className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700"
+          >
+            Ver aprovações
+          </button>
+        </div>
+      )}
 
       {/* ── Banner de alerta — Prazos Fatais ─────────────────── */}
       {!loading && prazosAtivos && (

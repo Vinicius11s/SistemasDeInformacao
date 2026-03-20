@@ -14,6 +14,9 @@ import { Processos } from './pages/Processos';
 import { Audiencias } from './pages/Audiencias';
 import { Prazos } from './pages/Prazos';
 import { StagingClientes } from './pages/StagingClientes';
+import { StagingProcessos } from './pages/StagingProcessos';
+import { StagingCompromissos } from './pages/StagingCompromissos';
+import { StagingPrazos } from './pages/StagingPrazos';
 import { MfaChallenge } from './pages/MfaChallenge';
 import { SecuritySettings } from './pages/SecuritySettings';
 import { MinhaConta } from './pages/MinhaConta';
@@ -47,6 +50,9 @@ function App() {
           <Route path="audiencias" element={<Audiencias />} />
           <Route path="prazos" element={<Prazos />} />
           <Route path="staging" element={<StagingClientes />} />
+          <Route path="staging/processos" element={<StagingProcessos />} />
+          <Route path="staging/compromissos" element={<StagingCompromissos />} />
+          <Route path="staging/prazos" element={<StagingPrazos />} />
           <Route path="configuracoes" element={<SettingsLayout />}>
             <Route index element={<Navigate to="/app/configuracoes/minha-conta" replace />} />
             <Route path="minha-conta" element={<MinhaConta />} />

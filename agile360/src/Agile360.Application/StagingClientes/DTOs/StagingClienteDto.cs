@@ -1,4 +1,5 @@
 using Agile360.Domain.Enums;
+using System.Text.Json.Serialization;
 
 namespace Agile360.Application.StagingClientes.DTOs;
 
@@ -20,7 +21,16 @@ public record StagingClienteResponse(
     string? WhatsAppNumero,
     DateOnly? DataReferencia,
     string? AreaAtuacao,
+    string? CEP,
+    string? Estado,
+    string? Cidade,
     string? Endereco,
+    string? Numero,
+    string? Bairro,
+    string? Complemento,
+    string? EstadoCivil,
+    string? NumeroConta,
+    string? Pix,
     string? Observacoes,
     string Origem,
     string? OrigemMensagem,
@@ -49,6 +59,7 @@ public record CreateStagingClienteRequest(
     // Contato
     string? Email,
     string? Telefone,
+    [property: JsonPropertyName("whatsapp_numero")]
     string? WhatsAppNumero,
 
     // Endereço completo
@@ -72,6 +83,37 @@ public record CreateStagingClienteRequest(
 
     // Texto bruto e contexto da mensagem
     string? Mensagem
+);
+
+/// <summary>
+/// Partial update request used by the advogado before confirming.
+/// All fields are optional; only provided values will be persisted.
+/// </summary>
+public record UpdateStagingClienteRequest(
+    string? NomeCompleto,
+    string? CPF,
+    string? Telefone,
+    string? RazaoSocial,
+    string? CNPJ,
+    string? RG,
+    string? OrgaoExpedidor,
+    string? InscricaoEstadual,
+    string? Email,
+    [property: JsonPropertyName("whatsapp_numero")]
+    string? WhatsAppNumero,
+    DateOnly? DataReferencia,
+    string? EstadoCivil,
+    string? AreaAtuacao,
+    string? CEP,
+    string? Estado,
+    string? Cidade,
+    string? Endereco,
+    string? Numero,
+    string? Bairro,
+    string? Complemento,
+    string? NumeroConta,
+    string? Pix,
+    string? Observacoes
 );
 
 /// <summary>Lightweight summary used for the dashboard badge / card.</summary>

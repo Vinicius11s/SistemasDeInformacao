@@ -39,6 +39,7 @@ export interface PrazoDashboard {
 }
 
 export interface DashboardResumo {
+  total_staging_pendente: number;
   contadores:           DashboardContadores;
   compromissos_semana:  CompromissoDashboard[];
   processos_recentes:   ProcessoDashboard[];

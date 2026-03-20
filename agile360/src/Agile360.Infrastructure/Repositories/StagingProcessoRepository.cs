@@ -62,4 +62,12 @@ public class StagingProcessoRepository : IStagingProcessoRepository
         await _db.SaveChangesAsync(ct);
         return true;
     }
+
+    public async Task<bool> UpdateAsync(StagingProcesso item, CancellationToken ct = default)
+    {
+        if (item is null) return false;
+        item.UpdatedAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        return true;
+    }
 }

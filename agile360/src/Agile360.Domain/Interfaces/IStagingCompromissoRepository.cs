@@ -22,4 +22,7 @@ public interface IStagingCompromissoRepository
 
     Task<bool> ConfirmarAsync(Guid id, Guid advogadoId, Guid compromissoIdGerado, CancellationToken ct = default);
     Task<bool> RejeitarAsync(Guid id, Guid advogadoId, CancellationToken ct = default);
+
+    /// <summary>Persiste alterações do staging e atualiza UpdatedAt.</summary>
+    Task<bool> UpdateAsync(StagingCompromisso item, CancellationToken ct = default);
 }

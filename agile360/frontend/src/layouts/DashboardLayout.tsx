@@ -12,13 +12,16 @@ import {
   Settings,
   Menu,
   X,
+  MessageSquare,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { countStagingPendentes } from '../api/staging';
 
 // ─── Estrutura de navegação ────────────────────────────────────────────────
 const navItems = [
   { to: '/app',            label: 'Painel',       icon: LayoutDashboard, exact: true  },
+  { to: '/app/staging',   label: 'Aprovações',   icon: MessageSquare,    exact: true  },
   { to: '/app/clientes',   label: 'Clientes',     icon: Users,           exact: false },
   { to: '/app/processos',  label: 'Processos',    icon: FolderOpen,      exact: false },
   { to: '/app/audiencias', label: 'Compromissos', icon: CalendarDays,    exact: false },
@@ -48,6 +51,7 @@ export function DashboardLayout() {
   const { isDark, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [stagingPendentesCount, setStagingPendentesCount] = useState(0);
 
   useEffect(() => {
     const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
@@ -60,6 +64,32 @@ export function DashboardLayout() {
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      const token = state.token;
+      if (!token) {
+        if (!cancelled) setStagingPendentesCount(0);
+        return;
+      }
+
+      const res = await countStagingPendentes(token);
+      if (cancelled) return;
+
+      if (res.success && res.data) {
+        setStagingPendentesCount(res.data.pendentes);
+      } else {
+        setStagingPendentesCount(0);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [state.token]);
 
   const NavLinkContent = ({ to, label, icon: Icon, exact }: typeof navItems[0]) => {
     const isActive = exact ? location.pathname === to : location.pathname.startsWith(to);
@@ -83,7 +113,14 @@ export function DashboardLayout() {
         }}
       >
         <Icon size={18} strokeWidth={isActive ? 2 : 1.5} style={{ flexShrink: 0 }} />
-        <span className="truncate">{label}</span>
+        <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+          <span className="truncate">{label}</span>
+          {to === '/app/staging' && stagingPendentesCount > 0 && (
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+              {stagingPendentesCount}
+            </span>
+          )}
+        </div>
       </Link>
     );
   };
@@ -138,7 +175,14 @@ export function DashboardLayout() {
                 }}
               >
                 <Icon size={15} strokeWidth={isActive ? 2 : 1.5} style={{ flexShrink: 0 }} />
-                {label}
+                <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                  <span className="truncate">{label}</span>
+                  {to === '/app/staging' && stagingPendentesCount > 0 && (
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+                      {stagingPendentesCount}
+                    </span>
+                  )}
+                </div>
               </Link>
             );
           })}
@@ -338,7 +382,14 @@ export function DashboardLayout() {
                   fontWeight: isActive ? 600 : 400,
                 }}
               >
-                <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
+                <div className="relative">
+                  <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
+                  {to === '/app/staging' && stagingPendentesCount > 0 && (
+                    <span className="absolute -top-2 -right-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+                      {stagingPendentesCount}
+                    </span>
+                  )}
+                </div>
                 <span className="truncate max-w-[64px]">{label}</span>
               </Link>
             );

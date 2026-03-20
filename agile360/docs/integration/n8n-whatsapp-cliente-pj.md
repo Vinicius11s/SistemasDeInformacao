@@ -1,5 +1,12 @@
 # Integração n8n / WhatsApp — Cadastro de Cliente PJ
 
+## Autenticação no POST (modelo Hub Central)
+O nó HTTP que chama `POST /api/cliente/staging` deve enviar:
+- `X-Master-Service-Key: {{ $env.MASTER_SERVICE_KEY }}`
+- `X-On-Behalf-Of: {{ $vars.advogadoId }}`
+
+O JSON enviado deve conter apenas os campos do `CreateStagingClienteRequest` (não incluir `advogado_id`).
+
 ## Fluxo de perguntas por TipoPessoa
 
 O bot detecta o tipo do cliente na primeira pergunta e ramifica o diálogo.

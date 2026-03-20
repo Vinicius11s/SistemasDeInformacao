@@ -24,6 +24,7 @@ public class Agile360DbContext : DbContext
     public DbSet<StagingCliente>      StagingClientes      => Set<StagingCliente>();
     public DbSet<StagingCompromisso>  StagingCompromissos  => Set<StagingCompromisso>();
     public DbSet<StagingProcesso>     StagingProcessos     => Set<StagingProcesso>();
+    public DbSet<StagingPrazo>        StagingPrazos        => Set<StagingPrazo>();
     public DbSet<RecoveryCode>        RecoveryCodes        => Set<RecoveryCode>();
 
     // Tabelas ainda não criadas no banco — DbSet disponível para migrations futuras,

@@ -74,8 +74,9 @@ public class ApiKeyAuthenticationOptions : AuthenticationSchemeOptions { }
             Logger.LogInformation("[ApiKey] Header recebido. prefixo={Prefix} | {Method} {Path}",
                 safePrefix, Request.Method, Request.Path);
 
-            Logger.LogDebug("[ApiKey] Tentando autenticar chave com prefixo {Prefix} | hash={Hash}",
-                safePrefix, hash);
+            var hashPrefix = hash.Length >= 8 ? hash[..8] : hash;
+            Logger.LogDebug("[ApiKey] Tentando autenticar chave com prefixo {Prefix} | hash_prefix={HashPrefix}",
+                safePrefix, hashPrefix);
 
             var repo = Context.RequestServices.GetRequiredService<IApiKeyRepository>();
             var apiKey = await repo.FindActiveAsync(hash, Context.RequestAborted);
@@ -110,15 +111,15 @@ public class ApiKeyAuthenticationOptions : AuthenticationSchemeOptions { }
             new Claim("advogado_id",  apiKey.AdvogadoId.ToString()),
             new Claim("auth_method",  "api_key"),
             new Claim("api_key_id",   apiKey.Id.ToString()),
-            new Claim("api_key_name", apiKey.Name),
+            new Claim("api_key_name", apiKey.KeyPrefix),
         };
 
         var identity  = new ClaimsIdentity(claims, ApiKeyAuthenticationDefaults.AuthenticationScheme);
         var principal = new ClaimsPrincipal(identity);
         var ticket    = new AuthenticationTicket(principal, ApiKeyAuthenticationDefaults.AuthenticationScheme);
 
-        Logger.LogInformation("API key '{Name}' authenticated for AdvogadoId {AdvogadoId}",
-            apiKey.Name, apiKey.AdvogadoId);
+        Logger.LogInformation("API key '{KeyPrefix}' authenticated for AdvogadoId {AdvogadoId}",
+            apiKey.KeyPrefix, apiKey.AdvogadoId);
 
         return AuthenticateResult.Success(ticket);
     }

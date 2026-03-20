@@ -37,5 +37,17 @@ public record CreateStagingCompromissoRequest(
     string?   OrigemMensagem     // Texto bruto da mensagem WhatsApp — contexto para revisão
 );
 
+/// <summary>
+/// Request DTO usada pelo advogado para editar antes da ativação.
+/// Todos os campos são opcionais; valores nulos não alteram o staging.
+/// </summary>
+public record UpdateStagingCompromissoRequest(
+    string?   TipoCompromisso,
+    DateOnly? Data,
+    TimeOnly? Hora,
+    string?   Local,
+    int?      LembreteMinutos
+);
+
 /// <summary>Resumo leve para badge / card do dashboard.</summary>
 public record StagingCompromissoCountResponse(int Pendentes);

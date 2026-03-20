@@ -92,6 +92,7 @@ public static class DependencyInjection
         services.AddScoped<IStagingClienteRepository,     StagingClienteRepository>();
         services.AddScoped<IStagingCompromissoRepository, StagingCompromissoRepository>();
         services.AddScoped<IStagingProcessoRepository,    StagingProcessoRepository>();
+        services.AddScoped<IStagingPrazoRepository,        StagingPrazoRepository>();
 
         // ─── Health Check ─────────────────────────────────────────────────────────────
         services.AddHealthChecks();

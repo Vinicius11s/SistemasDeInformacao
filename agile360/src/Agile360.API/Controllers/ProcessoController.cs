@@ -1,21 +1,36 @@
 using Agile360.API.Models;
 using Agile360.Application.Processos.DTOs;
+using Agile360.Application.Interfaces;
 using Agile360.Domain.Entities;
 using Agile360.Domain.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 namespace Agile360.API.Controllers;
 
 [Authorize]
 [ApiController]
 [Route("api/processos")]
-public class ProcessoController(IProcessoRepository repo) : ControllerBase
+public class ProcessoController(
+    IProcessoRepository repo,
+    ICurrentUserService currentUser,
+    ILogger<ProcessoController> logger) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> Listar(CancellationToken ct)
     {
+        var sw = Stopwatch.StartNew();
         var lista = await repo.GetAllAsync(ct);
+        sw.Stop();
+
+        if (sw.ElapsedMilliseconds > 1000)
+        {
+            logger.LogWarning(
+                "[Processo] Listar demorou {ElapsedMs}ms (tenant={AdvogadoId}).",
+                sw.ElapsedMilliseconds, currentUser.AdvogadoId);
+        }
         return Ok(lista.Select(ToResponse));
     }
 

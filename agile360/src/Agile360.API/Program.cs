@@ -34,6 +34,7 @@ builder.Host.UseSerilog((ctx, lc) =>
 var jwtSecret   = builder.Configuration["JwtSettings:Secret"]   ?? "";
 var jwtIssuer   = builder.Configuration["JwtSettings:Issuer"]   ?? "";
 var jwtAudience = builder.Configuration["JwtSettings:Audience"] ?? "authenticated";
+var masterServiceKey = builder.Configuration["MasterServiceKey"] ?? "";
 
 // Só valida se o valor for real (não placeholder)
 var validateIssuer = !string.IsNullOrEmpty(jwtIssuer) && !jwtIssuer.Contains('<');
@@ -97,6 +98,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(
         ApiKeyAuthenticationDefaults.AuthenticationScheme, _ => { });
 
+// MasterServiceKey: Hub Central / n8n (usa X-On-Behalf-Of para selecionar o tenant)
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddScheme<MasterServiceKeyAuthenticationOptions, MasterServiceKeyAuthenticationHandler>(
+        MasterServiceKeyAuthenticationDefaults.AuthenticationScheme,
+        options => { options.ExpectedMasterKey = masterServiceKey; });
+
 builder.Services.AddAuthorization(options =>
 {
     // Política padrão: apenas JWT.
@@ -108,12 +115,13 @@ builder.Services.AddAuthorization(options =>
         .Build();
 
     // Política explícita para endpoints que aceitam JWT *ou* API Key
-    // (ex.: webhooks, integrações server-to-server).
+    // (ex.: webhooks, integrações server-to-server, Hub Central n8n).
     // Uso: [Authorize(Policy = "JwtOrApiKey")]
     options.AddPolicy("JwtOrApiKey",
         new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder(
                 JwtBearerDefaults.AuthenticationScheme,
-                ApiKeyAuthenticationDefaults.AuthenticationScheme)
+                ApiKeyAuthenticationDefaults.AuthenticationScheme,
+                MasterServiceKeyAuthenticationDefaults.AuthenticationScheme)
             .RequireAuthenticatedUser()
             .Build());
 });
@@ -232,9 +240,32 @@ app.Use(async (ctx, next) =>
             return s.Length > 24 ? s[..24] + "…" : s;
         }
 
+        // Mantém o debug de headers para comparar requests,
+        // mas mascara valores sensíveis (X-Api-Key) para não vazar chaves reais.
         var headers = string.Join(" | ",
             ctx.Request.Headers.Select(h =>
-                $"{h.Key}=[{string.Join(",", h.Value.Select(Trunc))}]"));
+            {
+                var isApiKeyHeader =
+                    h.Key.Equals(ApiKeyAuthenticationDefaults.HeaderName, StringComparison.OrdinalIgnoreCase);
+                var isMasterKeyHeader =
+                    h.Key.Equals(MasterServiceKeyAuthenticationDefaults.MasterKeyHeaderName, StringComparison.OrdinalIgnoreCase);
+
+                var maskedValues = h.Value.Select(v =>
+                {
+                    var trimmed = v?.Trim() ?? "";
+                    if (!isApiKeyHeader && !isMasterKeyHeader)
+                        return Trunc(trimmed);
+
+                    if (string.IsNullOrEmpty(trimmed))
+                        return "";
+
+                    // Ex: ABCD****
+                    var prefix = trimmed.Length >= 4 ? trimmed[..4] : trimmed;
+                    return prefix + "****";
+                });
+
+                return $"{h.Key}=[{string.Join(",", maskedValues)}]";
+            }));
 
         log.LogDebug("[DIAG-HEADERS] {Method} {Path} → {Headers}",
             ctx.Request.Method, ctx.Request.Path, headers);

@@ -15,11 +15,20 @@ public class ApiKeyRepository : IApiKeyRepository
     {
         return _db.ApiKeys
             .AsNoTracking()
-            .FirstOrDefaultAsync(k =>
+            .Where(k =>
+                k.Ativa &&
                 k.KeyHash == keyHash &&
                 k.RevokedAt == null &&
-                (k.ExpiresAt == null || k.ExpiresAt > DateTimeOffset.UtcNow),
-                ct);
+                (k.ExpiresAt == null || k.ExpiresAt > DateTimeOffset.UtcNow))
+            // Para evitar 42703 caso a coluna "nome amigável" não bata no schema,
+            // projetamos apenas campos essenciais para autenticar.
+            .Select(k => new ApiKey
+            {
+                Id = k.Id,
+                AdvogadoId = k.AdvogadoId,
+                KeyPrefix = k.KeyPrefix
+            })
+            .FirstOrDefaultAsync(ct);
     }
 
     public async Task CreateAsync(ApiKey apiKey, CancellationToken ct = default)

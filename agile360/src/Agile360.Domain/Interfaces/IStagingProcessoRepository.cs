@@ -22,4 +22,7 @@ public interface IStagingProcessoRepository
 
     Task<bool> ConfirmarAsync(Guid id, Guid advogadoId, Guid processoIdGerado, CancellationToken ct = default);
     Task<bool> RejeitarAsync(Guid id, Guid advogadoId, CancellationToken ct = default);
+
+    /// <summary>Persiste alterações do staging e atualiza UpdatedAt.</summary>
+    Task<bool> UpdateAsync(StagingProcesso item, CancellationToken ct = default);
 }

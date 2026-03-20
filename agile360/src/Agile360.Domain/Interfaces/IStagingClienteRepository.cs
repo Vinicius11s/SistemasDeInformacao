@@ -22,4 +22,10 @@ public interface IStagingClienteRepository
 
     Task<bool> ConfirmarAsync(Guid id, Guid advogadoId, Guid clienteIdGerado, CancellationToken ct = default);
     Task<bool> RejeitarAsync(Guid id, Guid advogadoId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Persists in-place updates to a staging record.
+    /// Caller is responsible for tenant isolation and Status checks.
+    /// </summary>
+    Task<bool> UpdateAsync(StagingCliente item, CancellationToken ct = default);
 }
